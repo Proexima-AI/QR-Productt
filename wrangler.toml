@@ -1,4 +1,4 @@
 name = "qrcode-app"
 compatibility_date = "2024-03-20"
 [assets]
-directory = "./dist"
+directory = "frontend/dist"
