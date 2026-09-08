@@ -44,6 +44,11 @@ export const updateMyBusiness = async (data) => {
   return res.data;
 };
 
+export const completeBusinessSetup = async (data) => {
+  const res = await axios.post(`${API_URL}/business/setup-complete`, data, getAuthHeaders());
+  return res.data;
+};
+
 export const recordScan = async (id) => {
   await axios.post(`${API_URL}/business/${id}/stats/scan`);
 };
@@ -77,4 +82,17 @@ export const generateReviewBackend = async (data) => {
   // data: { businessName, category, rating, topics, instructions }
   const res = await axios.post(`${API_URL}/generate-review`, data);
   return res.data.review;
+};
+
+// ========================
+// Google Integration Services
+// ========================
+export const getGoogleAuthUrl = async () => {
+  const res = await axios.get(`${API_URL}/google/auth`, getAuthHeaders());
+  return res.data.url;
+};
+
+export const getGoogleReviews = async () => {
+  const res = await axios.get(`${API_URL}/google/reviews`, getAuthHeaders());
+  return res.data;
 };

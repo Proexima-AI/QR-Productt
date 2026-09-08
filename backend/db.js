@@ -73,7 +73,25 @@ async function initTablesMysql(pool) {
       google_review_count INT DEFAULT 0,
       avg_rating DECIMAL(2,1) DEFAULT 0.0,
       intercepted_bad_reviews INT DEFAULT 0,
+      google_access_token TEXT,
+      google_refresh_token TEXT,
+      google_account_id VARCHAR(255),
+      auto_reply_enabled BOOLEAN DEFAULT FALSE,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `;
+
+  const googleReviewsQuery = `
+    CREATE TABLE IF NOT EXISTS google_reviews (
+      review_id VARCHAR(255) PRIMARY KEY,
+      business_id VARCHAR(255) NOT NULL,
+      rating INT,
+      comment TEXT,
+      reviewer_name VARCHAR(255),
+      ai_reply TEXT,
+      reply_posted BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
     );
   `;
 
@@ -94,6 +112,7 @@ async function initTablesMysql(pool) {
 
   await pool.query(usersQuery);
   await pool.query(businessQuery);
+  await pool.query(googleReviewsQuery);
   await pool.query(feedbackQuery);
   console.log('✅ MySQL tables initialized.');
 }
@@ -127,7 +146,25 @@ function initTablesSqlite(database) {
         google_review_count INTEGER DEFAULT 0,
         avg_rating REAL DEFAULT 0.0,
         intercepted_bad_reviews INTEGER DEFAULT 0,
+        google_access_token TEXT,
+        google_refresh_token TEXT,
+        google_account_id TEXT,
+        auto_reply_enabled INTEGER DEFAULT 0,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    database.run(`
+      CREATE TABLE IF NOT EXISTS google_reviews (
+        review_id TEXT PRIMARY KEY,
+        business_id TEXT NOT NULL,
+        rating INTEGER,
+        comment TEXT,
+        reviewer_name TEXT,
+        ai_reply TEXT,
+        reply_posted INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
       )
     `);
 

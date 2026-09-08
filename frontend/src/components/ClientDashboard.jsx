@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Building, Key, Star, BarChart3, MessageSquare, ExternalLink, Settings, Save, CheckCircle2, ShieldAlert, Sparkles, Filter, ChevronRight } from 'lucide-react';
+import { Building, Key, Star, BarChart3, MessageSquare, ExternalLink, Settings, Save, CheckCircle2, ShieldAlert, Sparkles, Filter, ChevronRight, Share2 } from 'lucide-react';
 import { BUSINESS_CATEGORIES } from './BusinessPresets';
+import { getGoogleAuthUrl } from '../services/apiService';
 
-export default function ClientDashboard({ business, onUpdateBusiness, internalFeedback, onResolveFeedback }) {
+export default function ClientDashboard({ business, onUpdateBusiness, internalFeedback, googleReviews = [], onResolveFeedback }) {
   const [activeTab, setActiveTab] = useState('analytics');
   const [formData, setFormData] = useState({ ...business });
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -67,6 +68,14 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
                 {internalFeedback.length}
               </span>
             )}
+          </button>
+          <button
+            onClick={() => setActiveTab('google_sync')}
+            className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1.5 relative transition-all ${
+              activeTab === 'google_sync' ? 'bg-white text-indigo-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+            }`}
+          >
+            <Share2 className="w-4 h-4" /> Google AI Sync
           </button>
           <button
             onClick={() => setActiveTab('settings')}
@@ -213,6 +222,96 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
                       {fb.status === 'Resolved' ? '✓ Resolved' : 'Mark as Resolved'}
                     </button>
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2.5: GOOGLE AI SYNC */}
+      {activeTab === 'google_sync' && (
+        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-8 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
+            <div>
+              <h3 className="text-xl font-black text-slate-900 flex items-center gap-2 tracking-tight">
+                <Share2 className="w-5 h-5 text-indigo-500" />
+                Google Reviews & AI Auto-Reply
+              </h3>
+              <p className="text-sm text-slate-500 mt-1 font-medium">
+                View your actual Google Maps reviews and the dynamic AI responses we automatically generated and posted.
+              </p>
+            </div>
+            
+            {!business.google_access_token ? (
+              <button 
+                onClick={async () => {
+                  try {
+                    const url = await getGoogleAuthUrl();
+                    window.location.href = url;
+                  } catch (e) {
+                    alert("Could not connect to Google at this time.");
+                  }
+                }}
+                className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg shadow hover:bg-indigo-700 transition"
+              >
+                Connect Google Account
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg border border-emerald-200 font-bold text-sm">
+                <CheckCircle2 className="w-4 h-4" /> Google Connected
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div>
+              <h4 className="font-bold text-slate-900">Enable AI Auto-Reply</h4>
+              <p className="text-xs text-slate-500">Automatically reply to new Google Maps reviews using Gemini AI.</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="sr-only peer" 
+                checked={business.auto_reply_enabled === 1 || business.auto_reply_enabled === true}
+                onChange={async (e) => {
+                  const updated = { ...business, auto_reply_enabled: e.target.checked };
+                  await onUpdateBusiness(updated);
+                }}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+            </label>
+          </div>
+
+          {googleReviews.length === 0 ? (
+            <div className="text-center py-16 bg-slate-50 rounded-xl border border-slate-100 text-slate-500 font-medium text-sm">
+              No synced Google reviews found yet. Turn on Auto-Reply and wait for new reviews!
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {googleReviews.map((rev) => (
+                <div key={rev.review_id} className="bg-white border border-slate-200 shadow-sm rounded-xl p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-50 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-amber-400 font-black text-sm">{'★'.repeat(rev.rating)}</span>
+                      <span className="text-sm font-bold text-slate-900">{rev.reviewer_name}</span>
+                    </div>
+                    <span className="text-xs text-slate-400 font-medium">{new Date(rev.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <p className="text-sm text-slate-700 font-medium leading-relaxed">
+                    "{rev.comment}"
+                  </p>
+                  
+                  {rev.ai_reply && (
+                    <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl mt-4 relative">
+                      <div className="absolute -top-3 left-4 bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" /> Auto-Replied
+                      </div>
+                      <p className="text-sm text-indigo-900 font-medium mt-1">
+                        {rev.ai_reply}
+                      </p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

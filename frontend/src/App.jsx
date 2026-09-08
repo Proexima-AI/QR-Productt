@@ -6,13 +6,15 @@ import ClientDashboard from './components/ClientDashboard';
 import CustomerReviewPage from './components/CustomerReviewPage';
 import HeaderNav from './components/HeaderNav';
 import QRCodeGenerator from './components/QRCodeGenerator';
-import { getMyBusiness, getMyFeedback, getBusinessById, submitFeedback, resolveFeedback, updateMyBusiness } from './services/apiService';
+import OnboardingSetup from './components/OnboardingSetup';
+import { getMyBusiness, getMyFeedback, getBusinessById, submitFeedback, resolveFeedback, updateMyBusiness, getGoogleReviews } from './services/apiService';
 import { ShieldCheck, Clock } from 'lucide-react';
 
 function ProtectedDashboard() {
   const navigate = useNavigate();
   const [business, setBusiness] = useState(null);
   const [feedbacks, setFeedbacks] = useState([]);
+  const [googleReviews, setGoogleReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState('dashboard');
 
@@ -29,8 +31,10 @@ function ProtectedDashboard() {
         try {
           const bData = await getMyBusiness();
           const fData = await getMyFeedback();
+          const gData = await getGoogleReviews();
           setBusiness(bData);
           setFeedbacks(fData);
+          setGoogleReviews(gData);
         } catch (err) {
           console.error('Failed to load dashboard data', err);
         } finally {
@@ -46,22 +50,7 @@ function ProtectedDashboard() {
   if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-indigo-600">Loading...</div>;
 
   if (status === 'pending_setup') {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-6">
-          <Clock className="w-10 h-10 text-indigo-600 animate-pulse" />
-        </div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-4">Account Setup in Progress</h1>
-        <p className="text-slate-600 max-w-md mx-auto mb-8 leading-relaxed">
-          Thank you for purchasing ReviewPulse AI! Our team has received your order and is currently provisioning your business profile, optimizing your keywords, and preparing your dashboard.
-          <br /><br />
-          We will contact you shortly once setup is complete.
-        </p>
-        <button onClick={() => { localStorage.clear(); navigate('/login'); }} className="px-6 py-2 border border-slate-300 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-          Logout
-        </button>
-      </div>
-    );
+    return <OnboardingSetup onComplete={() => navigate(0)} />;
   }
 
   if (!business) return <div className="text-center text-slate-900 p-10">No business found. Please contact support.</div>;
@@ -79,6 +68,7 @@ function ProtectedDashboard() {
               setBusiness(data);
             }} 
             internalFeedback={feedbacks}
+            googleReviews={googleReviews}
             onResolveFeedback={async (id) => {
               await resolveFeedback(id);
               setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, status: 'Resolved' } : f));
