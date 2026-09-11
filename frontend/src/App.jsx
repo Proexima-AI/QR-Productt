@@ -8,6 +8,7 @@ import HeaderNav from './components/HeaderNav';
 import QRCodeGenerator from './components/QRCodeGenerator';
 import OnboardingSetup from './components/OnboardingSetup';
 import PaymentGateway from './components/PaymentGateway';
+import SuperAdminDashboard from './components/SuperAdminDashboard';
 import { getMyBusiness, getMyFeedback, getBusinessById, submitFeedback, resolveFeedback, updateMyBusiness, getGoogleReviews } from './services/apiService';
 import { ShieldCheck, Clock } from 'lucide-react';
 
@@ -142,11 +143,24 @@ function PublicReviewPage() {
   );
 }
 
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/admin" element={
+          <ProtectedRoute>
+            <SuperAdminDashboard />
+          </ProtectedRoute>
+        } />
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<ProtectedDashboard />} />

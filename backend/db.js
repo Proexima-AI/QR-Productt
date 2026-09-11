@@ -52,6 +52,7 @@ async function initTablesMysql(pool) {
       email VARCHAR(255) UNIQUE NOT NULL,
       password_hash VARCHAR(255) NOT NULL,
       status ENUM('pending_setup', 'active') DEFAULT 'pending_setup',
+      role ENUM('user', 'admin') DEFAULT 'user',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       subscription_ends_at TIMESTAMP NULL
     );
@@ -111,15 +112,46 @@ async function initTablesMysql(pool) {
     );
   `;
 
+  const paymentsQuery = `
+    CREATE TABLE IF NOT EXISTS payments (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      razorpay_order_id VARCHAR(255),
+      razorpay_payment_id VARCHAR(255),
+      amount DECIMAL(10,2),
+      plan_duration_days INT,
+      status VARCHAR(50) DEFAULT 'success',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `;
+
+  const supportTicketsQuery = `
+    CREATE TABLE IF NOT EXISTS support_tickets (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      subject VARCHAR(255),
+      message TEXT,
+      reply TEXT,
+      status ENUM('open', 'closed') DEFAULT 'open',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `;
+
   await pool.query(usersQuery);
   try {
     await pool.query("ALTER TABLE users ADD COLUMN subscription_ends_at TIMESTAMP NULL");
-  } catch (err) {
-    // Column might already exist, ignore error
-  }
+  } catch (err) {}
+  try {
+    await pool.query("ALTER TABLE users ADD COLUMN role ENUM('user', 'admin') DEFAULT 'user'");
+  } catch (err) {}
   await pool.query(businessQuery);
   await pool.query(googleReviewsQuery);
   await pool.query(feedbackQuery);
+  await pool.query(paymentsQuery);
+  await pool.query(supportTicketsQuery);
   console.log('✅ MySQL tables initialized.');
 }
 
@@ -131,15 +163,15 @@ function initTablesSqlite(database) {
         email TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
         status TEXT DEFAULT 'pending_setup',
+        role TEXT DEFAULT 'user',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         subscription_ends_at DATETIME
       )
     `);
 
     // Safely add column if upgrading existing DB
-    database.run(`ALTER TABLE users ADD COLUMN subscription_ends_at DATETIME`, (err) => {
-      // Ignore error if column already exists
-    });
+    database.run(`ALTER TABLE users ADD COLUMN subscription_ends_at DATETIME`, (err) => {});
+    database.run(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'`, (err) => {});
     database.run(`ALTER TABLE businesses ADD COLUMN auto_reply_enabled INTEGER DEFAULT 0`, (err) => {
       // Ignore error if column already exists
     });
@@ -195,6 +227,34 @@ function initTablesSqlite(database) {
         status TEXT DEFAULT 'Unresolved',
         chips TEXT,
         FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+      )
+    `);
+
+    database.run(`
+      CREATE TABLE IF NOT EXISTS payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        razorpay_order_id TEXT,
+        razorpay_payment_id TEXT,
+        amount REAL,
+        plan_duration_days INTEGER,
+        status TEXT DEFAULT 'success',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    database.run(`
+      CREATE TABLE IF NOT EXISTS support_tickets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        subject TEXT,
+        message TEXT,
+        reply TEXT,
+        status TEXT DEFAULT 'open',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
     console.log('✅ SQLite tables initialized.');

@@ -208,7 +208,7 @@ app.post('/api/payment/create-order', authenticate, async (req, res) => {
 });
 
 app.post('/api/payment/verify', authenticate, async (req, res) => {
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan_duration_days } = req.body;
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan_duration_days, amount } = req.body;
   try {
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
@@ -237,6 +237,11 @@ app.post('/api/payment/verify', authenticate, async (req, res) => {
       formattedDate = newEndsAt.toISOString().slice(0, 19).replace('T', ' ');
       
       await query('UPDATE users SET subscription_ends_at = ? WHERE id = ?', [formattedDate, req.user.id]);
+      
+      await query(
+        'INSERT INTO payments (user_id, razorpay_order_id, razorpay_payment_id, amount, plan_duration_days) VALUES (?, ?, ?, ?, ?)',
+        [req.user.id, razorpay_order_id, razorpay_payment_id, amount || 0, plan_duration_days]
+      );
       
       res.json({ success: true, subscription_ends_at: formattedDate });
     } else {
@@ -445,14 +450,102 @@ cron.schedule('* * * * *', async () => {
 // Temporary Route for Testing: Admin bypass to activate a user account
 app.get('/api/admin/activate/:email', async (req, res) => {
   try {
-    await query('UPDATE users SET status = ? WHERE email = ?', ['active', req.params.email]);
-    res.send(`User ${req.params.email} activated successfully. They can now access the dashboard.`);
+    const { email } = req.params;
+    
+    // Set 1-year subscription for testing
+    const newEndsAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    const formattedDate = newEndsAt.toISOString().slice(0, 19).replace('T', ' ');
+    
+    await query('UPDATE users SET subscription_ends_at = ? WHERE email = ?', [formattedDate, email]);
+    res.json({ message: 'User activated for 1 year' });
   } catch (error) {
-    res.status(500).send(error.message);
+    res.status(500).json({ error: 'Activation failed' });
+  }
+});
+
+// --- ADMIN ROUTES ---
+
+// Middleware to check if user is admin
+const requireAdmin = async (req, res, next) => {
+  try {
+    const userResult = await query('SELECT role FROM users WHERE id = ?', [req.user.id]);
+    if (userResult.length === 0 || userResult[0].role !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden: Admin access required' });
+    }
+    next();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to verify admin status' });
+  }
+};
+
+app.get('/api/admin/stats', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const usersResult = await query('SELECT COUNT(*) as count FROM users');
+    const totalUsers = usersResult[0].count;
+
+    const paymentsResult = await query('SELECT SUM(amount) as total_amount FROM payments WHERE status = "success"');
+    const totalRevenue = paymentsResult[0].total_amount || 0;
+
+    // Linear graph data: users created per day (last 7 days)
+    const graphData = await query(`
+      SELECT DATE(created_at) as date, COUNT(*) as users 
+      FROM users 
+      GROUP BY DATE(created_at) 
+      ORDER BY date DESC 
+      LIMIT 7
+    `);
+
+    res.json({ totalUsers, totalRevenue, graphData: graphData.reverse() });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch admin stats' });
+  }
+});
+
+app.get('/api/admin/users', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const users = await query(`
+      SELECT u.id, u.email, u.status, u.role, u.created_at, u.subscription_ends_at, b.name as business_name
+      FROM users u
+      LEFT JOIN businesses b ON u.id = b.user_id
+      ORDER BY u.created_at DESC
+    `);
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.put('/api/admin/users/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { role, subscription_ends_at } = req.body;
+    await query('UPDATE users SET role = ?, subscription_ends_at = ? WHERE id = ?', [role, subscription_ends_at, req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+app.get('/api/admin/tickets', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const tickets = await query('SELECT t.*, u.email FROM support_tickets t JOIN users u ON t.user_id = u.id ORDER BY t.created_at DESC');
+    res.json(tickets);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch tickets' });
+  }
+});
+
+app.post('/api/admin/tickets/:id/reply', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { reply } = req.body;
+    await query('UPDATE support_tickets SET reply = ?, status = "closed" WHERE id = ?', [reply, req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to reply to ticket' });
   }
 });
 
 const PORT = process.env.PORT || 5001;
+// START SERVER
 app.listen(PORT, () => {
   console.log(`🚀 Backend running on http://localhost:${PORT}`);
 });

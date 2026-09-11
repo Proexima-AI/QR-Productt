@@ -61,7 +61,7 @@ export function Signup() {
               <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">Owner Name</label>
               <div className="relative">
                 <User className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                <input required type="text" name="ownerName" value={formData.ownerName} onChange={handleChange} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-3 text-white text-sm focus:border-amber-500/50 focus:outline-none" placeholder="John Doe" />
+                <input required type="text" name="ownerName" value={formData.ownerName} onChange={handleChange} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-3 text-white text-sm focus:border-amber-500/50 focus:outline-none" placeholder="Enter Your Name" />
               </div>
             </div>
             
@@ -69,7 +69,7 @@ export function Signup() {
               <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">Business Name</label>
               <div className="relative">
                 <Building className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                <input required type="text" name="businessName" value={formData.businessName} onChange={handleChange} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-3 text-white text-sm focus:border-amber-500/50 focus:outline-none" placeholder="Joe's Pizza" />
+                <input required type="text" name="businessName" value={formData.businessName} onChange={handleChange} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-3 text-white text-sm focus:border-amber-500/50 focus:outline-none" placeholder="Enter Your Business Name" />
               </div>
             </div>
 
@@ -84,7 +84,7 @@ export function Signup() {
               <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">Email</label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                <input required type="email" name="email" value={formData.email} onChange={handleChange} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-3 text-white text-sm focus:border-amber-500/50 focus:outline-none" placeholder="john@example.com" />
+                <input required type="email" name="email" value={formData.email} onChange={handleChange} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-3 text-white text-sm focus:border-amber-500/50 focus:outline-none" placeholder="Enter Your Email" />
               </div>
             </div>
 
@@ -147,7 +147,7 @@ export function Login() {
             <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">Email</label>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-              <input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-3 text-white text-sm focus:border-amber-500/50 focus:outline-none" placeholder="john@example.com" />
+              <input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-3 text-white text-sm focus:border-amber-500/50 focus:outline-none" placeholder="Enter Your Email" />
             </div>
           </div>
 
