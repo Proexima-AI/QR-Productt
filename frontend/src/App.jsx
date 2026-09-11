@@ -7,6 +7,7 @@ import CustomerReviewPage from './components/CustomerReviewPage';
 import HeaderNav from './components/HeaderNav';
 import QRCodeGenerator from './components/QRCodeGenerator';
 import OnboardingSetup from './components/OnboardingSetup';
+import PaymentGateway from './components/PaymentGateway';
 import { getMyBusiness, getMyFeedback, getBusinessById, submitFeedback, resolveFeedback, updateMyBusiness, getGoogleReviews } from './services/apiService';
 import { ShieldCheck, Clock } from 'lucide-react';
 
@@ -17,8 +18,12 @@ function ProtectedDashboard() {
   const [googleReviews, setGoogleReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState('dashboard');
+  const [showPayment, setShowPayment] = useState(false);
 
   const status = localStorage.getItem('userStatus');
+  const createdAt = localStorage.getItem('createdAt');
+  const subscriptionEndsAt = localStorage.getItem('subscriptionEndsAt');
+  const userEmail = localStorage.getItem('userEmail');
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
@@ -47,7 +52,27 @@ function ProtectedDashboard() {
     }
   }, [navigate, status]);
 
+  useEffect(() => {
+    const now = new Date();
+    const hasActiveSubscription = subscriptionEndsAt && new Date(subscriptionEndsAt) > now;
+    
+    if (!hasActiveSubscription && userEmail !== 'test@proexima.com') {
+      setShowPayment(true);
+    } else {
+      setShowPayment(false);
+    }
+  }, [subscriptionEndsAt, userEmail]);
+
+  const handlePaymentSuccess = (newEndDate) => {
+    localStorage.setItem('subscriptionEndsAt', newEndDate);
+    setShowPayment(false);
+  };
+
   if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-indigo-600">Loading...</div>;
+
+  if (showPayment) {
+    return <PaymentGateway onPaymentSuccess={handlePaymentSuccess} />;
+  }
 
   if (status === 'pending_setup') {
     return <OnboardingSetup onComplete={() => navigate(0)} />;

@@ -5,6 +5,8 @@ const cron = require('node-cron');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const Razorpay = require('razorpay');
 const { query } = require('./db');
 
 const oauth2Client = new google.auth.OAuth2(
@@ -18,6 +20,11 @@ app.use(cors());
 app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
 // Middleware to authenticate JWT
 const authenticate = (req, res, next) => {
@@ -60,7 +67,7 @@ app.post('/api/auth/signup', async (req, res) => {
     );
 
     const token = jwt.sign({ id: userId, email, status: 'pending_setup' }, JWT_SECRET, { expiresIn: '1d' });
-    res.json({ token, user: { id: userId, email, status: 'pending_setup' } });
+    res.json({ token, user: { id: userId, email, status: 'pending_setup', created_at: new Date() } });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
@@ -79,7 +86,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
 
     const token = jwt.sign({ id: user.id, email: user.email, status: user.status }, JWT_SECRET, { expiresIn: '1d' });
-    res.json({ token, user: { id: user.id, email: user.email, status: user.status } });
+    res.json({ token, user: { id: user.id, email: user.email, status: user.status, created_at: user.created_at, subscription_ends_at: user.subscription_ends_at } });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
@@ -150,7 +157,9 @@ app.post('/api/business/setup-complete', authenticate, async (req, res) => {
     // Generate new token with active status
     const token = jwt.sign({ id: req.user.id, email: req.user.email, status: 'active' }, JWT_SECRET, { expiresIn: '1d' });
     
-    res.json({ success: true, token, user: { id: req.user.id, email: req.user.email, status: 'active' } });
+    const userQuery = await query('SELECT created_at, subscription_ends_at FROM users WHERE id = ?', [req.user.id]);
+    
+    res.json({ success: true, token, user: { id: req.user.id, email: req.user.email, status: 'active', created_at: userQuery[0].created_at, subscription_ends_at: userQuery[0].subscription_ends_at } });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
@@ -175,6 +184,67 @@ app.post('/api/business/:id/stats/scan', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ========================
+// PAYMENT ROUTES
+// ========================
+
+app.post('/api/payment/create-order', authenticate, async (req, res) => {
+  const { amount, plan } = req.body;
+  try {
+    const options = {
+      amount: Math.round(amount * 100), // amount in the smallest currency unit
+      currency: "INR",
+      receipt: `receipt_${req.user.id}_${Date.now()}`
+    };
+    const order = await razorpay.orders.create(options);
+    res.json(order);
+  } catch (error) {
+    console.error('Razorpay Create Order Error:', error);
+    res.status(500).json({ error: 'Could not create order' });
+  }
+});
+
+app.post('/api/payment/verify', authenticate, async (req, res) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan_duration_days } = req.body;
+  try {
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(body.toString())
+      .digest('hex');
+
+    if (expectedSignature === razorpay_signature) {
+      // Payment is verified
+      // Calculate new subscription ends at
+      const daysToAdd = plan_duration_days || 30; // default 30 if not specified
+      
+      const userResult = await query('SELECT subscription_ends_at FROM users WHERE id = ?', [req.user.id]);
+      let currentEndsAt = new Date();
+      if (userResult.length > 0 && userResult[0].subscription_ends_at) {
+        const existingEnd = new Date(userResult[0].subscription_ends_at);
+        if (existingEnd > currentEndsAt) {
+          currentEndsAt = existingEnd; // Extend from current end date
+        }
+      }
+      
+      const newEndsAt = new Date(currentEndsAt.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+      
+      let formattedDate;
+      // Depending on mysql or sqlite, format it to YYYY-MM-DD HH:MM:SS
+      formattedDate = newEndsAt.toISOString().slice(0, 19).replace('T', ' ');
+      
+      await query('UPDATE users SET subscription_ends_at = ? WHERE id = ?', [formattedDate, req.user.id]);
+      
+      res.json({ success: true, subscription_ends_at: formattedDate });
+    } else {
+      res.status(400).json({ error: 'Invalid signature' });
+    }
+  } catch (error) {
+    console.error('Payment verification error:', error);
+    res.status(500).json({ error: 'Payment verification failed' });
   }
 });
 

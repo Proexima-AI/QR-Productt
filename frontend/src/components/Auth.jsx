@@ -6,7 +6,6 @@ import { BUSINESS_CATEGORIES } from './BusinessPresets';
 
 export function Signup() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
@@ -20,17 +19,17 @@ export function Signup() {
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handlePurchase = async (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      // Simulate Payment Delay
-      await new Promise(r => setTimeout(r, 1500));
-      
       const res = await signup(formData);
       localStorage.setItem('token', res.token);
       localStorage.setItem('userStatus', res.user.status);
+      localStorage.setItem('createdAt', res.user.created_at);
+      localStorage.setItem('subscriptionEndsAt', res.user.subscription_ends_at || '');
+      localStorage.setItem('userEmail', res.user.email);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.error || 'Signup failed. Please try again.');
@@ -48,17 +47,16 @@ export function Signup() {
 
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-white mb-2">
-            {step === 1 ? 'Create Your Account' : 'Complete Purchase'}
+            Create Your Account
           </h2>
           <p className="text-sm text-slate-400">
-            {step === 1 ? 'Step 1 of 2: Business Details' : 'Step 2 of 2: Secure Payment'}
+            Start Your 7-Day Free Trial
           </p>
         </div>
 
         {error && <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs rounded-xl">{error}</div>}
 
-        {step === 1 ? (
-          <form onSubmit={(e) => { e.preventDefault(); setStep(2); }} className="space-y-4">
+        <form onSubmit={handleSignup} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">Owner Name</label>
               <div className="relative">
@@ -98,41 +96,11 @@ export function Signup() {
               </div>
             </div>
 
-            <button type="submit" className="w-full mt-4 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl flex items-center justify-center gap-2 transition-colors">
-              Continue to Payment <ChevronRight className="w-4 h-4" />
+            <button disabled={loading} type="submit" className="w-full mt-4 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50">
+              {loading ? 'Creating Account...' : 'Start Free Trial'} <ChevronRight className="w-4 h-4" />
             </button>
             <p className="text-center text-xs text-slate-500 mt-4">Already have an account? <span onClick={() => navigate('/login')} className="text-amber-500 cursor-pointer">Login</span></p>
           </form>
-        ) : (
-          <form onSubmit={handlePurchase} className="space-y-5">
-            <div className="bg-slate-950 border border-amber-500/30 rounded-xl p-4 flex justify-between items-center text-sm">
-              <div className="text-slate-300">
-                <p>Setup Fee: ₹1999</p>
-                <p>6-Month Plan: ₹1800</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-slate-500">Total Today</p>
-                <p className="text-xl font-bold text-white">₹3799</p>
-              </div>
-            </div>
-
-            <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-2">
-                <CreditCard className="w-4 h-4" /> Mock Payment Method
-              </h4>
-              <p className="text-[11px] text-slate-500 leading-relaxed mb-4">
-                Since this is a demo environment, no actual payment is required. Clicking the button below will simulate a successful ₹3799 transaction and create your account.
-              </p>
-            </div>
-
-            <button disabled={loading} type="submit" className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50">
-              {loading ? 'Processing Transaction...' : 'Pay ₹3799 & Setup Account'}
-            </button>
-            <button type="button" onClick={() => setStep(1)} className="w-full py-2 text-xs text-slate-400 hover:text-white transition">
-              Back to Details
-            </button>
-          </form>
-        )}
       </div>
     </div>
   );
@@ -153,6 +121,9 @@ export function Login() {
       const res = await login(email, password);
       localStorage.setItem('token', res.token);
       localStorage.setItem('userStatus', res.user.status);
+      localStorage.setItem('createdAt', res.user.created_at);
+      localStorage.setItem('subscriptionEndsAt', res.user.subscription_ends_at || '');
+      localStorage.setItem('userEmail', res.user.email);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed.');

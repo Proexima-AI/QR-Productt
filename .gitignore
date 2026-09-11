@@ -8,3 +8,4 @@ frontend/deploy_out/
 memory.md
 .DS_Store
 *.log
+database.sqlite

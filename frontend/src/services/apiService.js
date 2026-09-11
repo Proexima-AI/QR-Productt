@@ -96,3 +96,16 @@ export const getGoogleReviews = async () => {
   const res = await axios.get(`${API_URL}/google/reviews`, getAuthHeaders());
   return res.data;
 };
+
+// ========================
+// Payment Services
+// ========================
+export const createRazorpayOrder = async (amount, plan) => {
+  const res = await axios.post(`${API_URL}/payment/create-order`, { amount, plan }, getAuthHeaders());
+  return res.data;
+};
+
+export const verifyRazorpayPayment = async (data) => {
+  const res = await axios.post(`${API_URL}/payment/verify`, data, getAuthHeaders());
+  return res.data;
+};

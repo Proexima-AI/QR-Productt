@@ -52,7 +52,8 @@ async function initTablesMysql(pool) {
       email VARCHAR(255) UNIQUE NOT NULL,
       password_hash VARCHAR(255) NOT NULL,
       status ENUM('pending_setup', 'active') DEFAULT 'pending_setup',
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      subscription_ends_at TIMESTAMP NULL
     );
   `;
 
@@ -111,6 +112,11 @@ async function initTablesMysql(pool) {
   `;
 
   await pool.query(usersQuery);
+  try {
+    await pool.query("ALTER TABLE users ADD COLUMN subscription_ends_at TIMESTAMP NULL");
+  } catch (err) {
+    // Column might already exist, ignore error
+  }
   await pool.query(businessQuery);
   await pool.query(googleReviewsQuery);
   await pool.query(feedbackQuery);
@@ -125,9 +131,18 @@ function initTablesSqlite(database) {
         email TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
         status TEXT DEFAULT 'pending_setup',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        subscription_ends_at DATETIME
       )
     `);
+
+    // Safely add column if upgrading existing DB
+    database.run(`ALTER TABLE users ADD COLUMN subscription_ends_at DATETIME`, (err) => {
+      // Ignore error if column already exists
+    });
+    database.run(`ALTER TABLE businesses ADD COLUMN auto_reply_enabled INTEGER DEFAULT 0`, (err) => {
+      // Ignore error if column already exists
+    });
 
     database.run(`
       CREATE TABLE IF NOT EXISTS businesses (
