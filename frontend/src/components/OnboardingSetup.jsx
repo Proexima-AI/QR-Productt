@@ -30,6 +30,8 @@ export default function OnboardingSetup({ onComplete }) {
         // Update local storage with new active token
         localStorage.setItem('token', res.token);
         localStorage.setItem('userStatus', 'active');
+        localStorage.setItem('createdAt', res.user.created_at);
+        localStorage.setItem('subscriptionEndsAt', res.user.subscription_ends_at || '');
         // Notify parent to refresh
         if (onComplete) onComplete();
       }

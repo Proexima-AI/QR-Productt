@@ -238,69 +238,57 @@ export default function LandingPage() {
         </div>
 
         {/* Pricing Section */}
-        <div id="pricing" className="w-full max-w-5xl mx-auto mt-40 scroll-mt-24 relative">
+        <div id="pricing" className="w-full max-w-[1200px] mx-auto mt-40 scroll-mt-24 relative px-4">
           <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 text-xs font-bold text-indigo-600 mb-4 border border-indigo-100">
+              <Star className="w-4 h-4 text-indigo-600 fill-indigo-600" /> Start Your 7-Day Free Trial
+            </div>
             <h2 className="text-4xl md:text-5xl font-extrabold mb-4 text-slate-900 tracking-tight">Transparent, Powerful Pricing.</h2>
-            <p className="text-slate-600 text-lg">One system. Unfair advantage for your local business.</p>
+            <p className="text-slate-600 text-lg max-w-2xl mx-auto">One system. Unfair advantage for your local business. All plans include a one-time setup fee of ₹1,499.</p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center bg-white rounded-[2.5rem] p-4 shadow-2xl shadow-slate-200/50 border border-slate-200 overflow-hidden">
-
-            {/* Left Info */}
-            <div className="p-8 lg:p-12 space-y-8">
-              <div>
-                <h3 className="text-3xl font-bold text-slate-900 mb-2">ReviewPulse Pro</h3>
-                <p className="text-slate-900/60">The complete review generation & reputation protection system.</p>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 bg-indigo-600/20 p-1 rounded-full"><CheckCircle2 className="w-4 h-4 text-indigo-600" /></div>
-                  <div>
-                    <h4 className="font-bold text-slate-900">One-Time Setup</h4>
-                    <p className="text-slate-600 text-sm">We configure your Google integration, build your dashboard, and generate your custom QR codes.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 bg-indigo-600/20 p-1 rounded-full"><CheckCircle2 className="w-4 h-4 text-indigo-600" /></div>
-                  <div>
-                    <h4 className="font-bold text-slate-900">AI Server Maintenance</h4>
-                    <p className="text-slate-600 text-sm">A small recurring fee to power the Gemini AI generation engine and keep your dashboard online 24/7.</p>
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center max-w-4xl mx-auto">
+            {/* 6 Months Plan */}
+            <div className="bg-[#16261F] p-8 rounded-3xl text-white shadow-xl relative overflow-hidden border border-indigo-500/30">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/80/20 blur-3xl rounded-full pointer-events-none" />
+              <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-4 py-1.5 rounded-bl-xl">+ 15 Days Extra</div>
+              <h3 className="text-xl font-bold mb-3 text-white">6 Months Plan</h3>
+              <div className="flex flex-col gap-1 mb-4">
+                <div className="text-[#F5F7F1]/60 text-lg line-through decoration-rose-500 decoration-2">₹1,794</div>
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-black text-white">₹1,694</span>
+                  <span className="text-[#F5F7F1]/60 font-medium pb-1">total</span>
                 </div>
               </div>
+              <p className="text-[#F5F7F1]/60 text-sm mb-6 pb-6 border-b border-[#F5F7F1]/10">Plus ₹1,499 Setup Fee & 18% GST.</p>
+              <ul className="space-y-4 mb-8 relative z-10">
+                 <li className="flex items-start gap-3 text-[#F5F7F1]/80 text-sm"><CheckCircle2 className="w-5 h-5 text-indigo-400 shrink-0" /> Full System Access</li>
+                 <li className="flex items-start gap-3 text-[#F5F7F1]/80 text-sm"><CheckCircle2 className="w-5 h-5 text-indigo-400 shrink-0" /> QR Code Standee Design</li>
+                 <li className="flex items-start gap-3 text-[#F5F7F1]/80 text-sm"><CheckCircle2 className="w-5 h-5 text-indigo-400 shrink-0" /> Priority Support</li>
+                 <li className="flex items-start gap-3 text-emerald-400 font-semibold text-sm"><CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" /> 15 Extra Days Added</li>
+              </ul>
+              <button onClick={() => navigate('/signup?plan=6m')} className="relative z-10 w-full py-3.5 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-500 shadow-lg shadow-indigo-600/30 transition-all flex justify-center items-center gap-2">Start Free Trial <ChevronRight className="w-4 h-4" /></button>
             </div>
 
-            {/* Pricing Card */}
-            <div className="bg-[#16261F] p-8 sm:p-12 rounded-[2rem] text-white relative overflow-hidden h-full flex flex-col justify-center">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/80/20 blur-3xl rounded-full pointer-events-none" />
-
-              <div className="relative z-10">
-                <div className="space-y-1 mb-8">
-                  <div className="flex items-end gap-2">
-                    <span className="text-5xl font-black text-white">₹1999</span>
-                    <span className="text-[#F5F7F1]/60 font-medium pb-1">One-time setup</span>
-                  </div>
-                  <div className="flex items-end gap-2">
-                    <span className="text-2xl font-bold text-[#F5F7F1]/60">+ ₹300</span>
-                    <span className="text-[#F5F7F1]/60 text-sm pb-1">/mo (Billed half-yearly)</span>
-                  </div>
+            {/* 1 Year Plan */}
+            <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 relative">
+              <div className="absolute top-0 right-0 bg-emerald-100 text-emerald-700 text-xs font-bold px-4 py-1.5 rounded-bl-xl rounded-tr-3xl">+ 40 Days Extra</div>
+              <h3 className="text-xl font-bold mb-3 text-slate-900">1 Year Plan</h3>
+              <div className="flex flex-col gap-1 mb-4">
+                <div className="text-slate-400 text-lg line-through decoration-rose-500 decoration-2">₹3,588</div>
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-black text-slate-900">₹3,488</span>
+                  <span className="text-slate-500 font-medium pb-1">total</span>
                 </div>
-
-                <div className="w-full h-px bg-[#16261F]/90 mb-8" />
-
-                <div className="bg-[#16261F]/90/80 rounded-2xl p-5 mb-8 flex justify-between items-center border border-[#F5F7F1]/20">
-                  <span className="text-sm font-medium text-[#F5F7F1]/70">Total upfront today</span>
-                  <span className="text-2xl font-black text-white">₹3799</span>
-                </div>
-
-                <button
-                  onClick={() => navigate('/signup')}
-                  className="w-full py-4 rounded-full bg-indigo-600 text-white font-bold text-lg hover:bg-indigo-500 shadow-xl shadow-indigo-600/30 hover:-translate-y-1 transition-all flex justify-center items-center gap-2"
-                >
-                  Purchase System <ChevronRight className="w-5 h-5" />
-                </button>
               </div>
+              <p className="text-slate-600 text-sm mb-6 pb-6 border-b border-slate-100">Plus ₹1,499 Setup Fee & 18% GST.</p>
+              <ul className="space-y-4 mb-8">
+                 <li className="flex items-start gap-3 text-slate-600 text-sm"><CheckCircle2 className="w-5 h-5 text-indigo-600 shrink-0" /> Full System Access</li>
+                 <li className="flex items-start gap-3 text-slate-600 text-sm"><CheckCircle2 className="w-5 h-5 text-indigo-600 shrink-0" /> QR Code Standee Design</li>
+                 <li className="flex items-start gap-3 text-slate-600 text-sm"><CheckCircle2 className="w-5 h-5 text-indigo-600 shrink-0" /> Priority Support</li>
+                 <li className="flex items-start gap-3 text-emerald-600 font-semibold text-sm"><CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" /> 40 Extra Days Added</li>
+              </ul>
+              <button onClick={() => navigate('/signup?plan=1y')} className="w-full py-3.5 rounded-xl bg-slate-100 text-slate-900 font-bold hover:bg-slate-200 transition-colors">Start Free Trial</button>
             </div>
           </div>
         </div>

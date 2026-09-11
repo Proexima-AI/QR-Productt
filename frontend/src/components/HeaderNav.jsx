@@ -10,6 +10,24 @@ export default function HeaderNav({ activeView, setActiveView }) {
     navigate('/login');
   };
 
+  const createdAt = localStorage.getItem('createdAt');
+  const subscriptionEndsAt = localStorage.getItem('subscriptionEndsAt');
+
+  let trialDaysLeft = null;
+  let hasActiveSubscription = false;
+
+  if (createdAt) {
+    const createdDate = new Date(createdAt);
+    const now = new Date();
+    const trialEndDate = new Date(createdDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+    hasActiveSubscription = subscriptionEndsAt && new Date(subscriptionEndsAt) > now;
+
+    if (!hasActiveSubscription) {
+      const msLeft = trialEndDate.getTime() - now.getTime();
+      trialDaysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+    }
+  }
+
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200 px-4 py-3">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -51,8 +69,18 @@ export default function HeaderNav({ activeView, setActiveView }) {
           </button>
         </div>
 
-        {/* Logout */}
-        <div className="hidden lg:flex items-center">
+        {/* Status & Logout */}
+        <div className="hidden lg:flex items-center gap-4">
+          {!hasActiveSubscription && trialDaysLeft !== null && trialDaysLeft > 0 && (
+            <div className="text-[11px] font-bold px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700">
+              {trialDaysLeft} Days Trial Left
+            </div>
+          )}
+          {hasActiveSubscription && (
+            <div className="text-[11px] font-bold px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700">
+              Pro Active
+            </div>
+          )}
           <button onClick={handleLogout} className="text-xs font-bold text-slate-500 hover:text-rose-500 transition-colors bg-slate-50 hover:bg-rose-50 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-rose-200">
             Logout
           </button>
