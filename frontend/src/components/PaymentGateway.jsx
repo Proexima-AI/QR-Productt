@@ -121,7 +121,7 @@ export default function PaymentGateway({ onPaymentSuccess }) {
         )}
 
         <div className="max-w-md mx-auto mb-8 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <label className="block text-sm font-semibold text-slate-700 mb-2">Have a promo code? (Use PROMO499)</label>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">Have a promo code?</label>
           <div className="flex gap-2">
             <input 
               type="text" 
