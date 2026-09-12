@@ -38,32 +38,33 @@ export default function LandingPage() {
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900 flex flex-col overflow-x-hidden">
 
       {/* Navbar */}
-      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/90 backdrop-blur-md border-b border-slate-200 py-3 shadow-sm' : 'bg-transparent py-4'}`}>
-        <div className="max-w-[1400px] mx-auto px-6 flex items-center justify-between">
+      <nav className={`fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-[1400px] z-50 transition-all duration-300 bg-[#0A39AB] rounded-full shadow-lg border border-transparent`}>
+        <div className="px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => scrollToSection('home')}>
-            <Star className="w-8 h-8 text-indigo-600 fill-indigo-600" />
-            <span className="text-2xl font-extrabold tracking-tight text-slate-900">Review<span className="text-indigo-600">Boost</span></span>
+            <Star className="w-8 h-8 text-white fill-white" />
+            <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">Review<span className="text-white/80">Boost</span></span>
           </div>
 
           {/* Desktop Nav Links */}
-          <div className="hidden md:flex items-center gap-8">
-            <button onClick={() => scrollToSection('home')} className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Home</button>
-            <button onClick={() => scrollToSection('about')} className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">About</button>
-            <button onClick={() => scrollToSection('how-it-works')} className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">How it Works</button>
-            <button onClick={() => scrollToSection('pricing')} className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Pricing</button>
-            <button onClick={() => scrollToSection('contact')} className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Contact Us</button>
+          <div className="hidden lg:flex items-center gap-8">
+            <button onClick={() => scrollToSection('home')} className="text-sm font-medium text-white hover:text-white/80 transition-colors">Home</button>
+            <button onClick={() => scrollToSection('about')} className="text-sm font-medium text-white hover:text-white/80 transition-colors">About</button>
+            <button onClick={() => scrollToSection('how-it-works')} className="text-sm font-medium text-white hover:text-white/80 transition-colors">How it Works</button>
+            <button onClick={() => scrollToSection('pricing')} className="text-sm font-medium text-white hover:text-white/80 transition-colors">Pricing</button>
+            <button onClick={() => scrollToSection('contact')} className="text-sm font-medium text-white hover:text-white/80 transition-colors">Contact Us</button>
           </div>
 
           <div className="flex items-center gap-4 sm:gap-6">
-            <button onClick={() => navigate('/login')} className="hidden sm:block text-sm font-semibold text-slate-600 hover:text-slate-900 px-5 py-2.5 rounded-full border border-slate-300 transition-colors">
-              Log In
+            <button onClick={() => navigate('/login')} className="hidden sm:flex items-center gap-2 text-sm font-medium text-white hover:text-white/80 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              Login
             </button>
-            <button onClick={() => navigate('/signup')} className="text-sm font-bold bg-indigo-600 text-white px-6 py-2.5 rounded-full shadow-md shadow-indigo-600/30 hover:shadow-lg hover:-translate-y-0.5 transition-all">
+            <button onClick={() => navigate('/signup')} className="text-sm font-semibold bg-white text-[#0A39AB] px-5 sm:px-6 py-2 sm:py-2.5 rounded-full hover:bg-slate-50 transition-colors">
               Get Started
             </button>
 
             {/* Mobile Menu Toggle */}
-            <button className="md:hidden text-slate-900" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            <button className="lg:hidden text-white" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={mobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16m-7 6h7"} />
               </svg>
@@ -73,19 +74,18 @@ export default function LandingPage() {
 
         {/* Mobile Nav Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 w-full bg-white border-b border-slate-200 py-4 px-6 flex flex-col gap-4 shadow-lg">
-            <button onClick={() => scrollToSection('home')} className="text-left text-base font-semibold text-slate-700">Home</button>
-            <button onClick={() => scrollToSection('about')} className="text-left text-base font-semibold text-slate-700">About</button>
-            <button onClick={() => scrollToSection('how-it-works')} className="text-left text-base font-semibold text-slate-700">How it Works</button>
-            <button onClick={() => scrollToSection('pricing')} className="text-left text-base font-semibold text-slate-700">Pricing</button>
-            <button onClick={() => scrollToSection('contact')} className="text-left text-base font-semibold text-slate-700">Contact Us</button>
-            <hr className="border-slate-100" />
-            <button onClick={() => navigate('/login')} className="text-left text-base font-semibold text-indigo-600">Client Login</button>
+          <div className="lg:hidden absolute top-[calc(100%+0.5rem)] left-0 w-full bg-[#0A39AB] rounded-2xl py-4 px-6 flex flex-col gap-4 shadow-xl">
+            <button onClick={() => scrollToSection('home')} className="text-left text-base font-semibold text-white hover:text-white/80">Home</button>
+            <button onClick={() => scrollToSection('about')} className="text-left text-base font-semibold text-white hover:text-white/80">About</button>
+            <button onClick={() => scrollToSection('how-it-works')} className="text-left text-base font-semibold text-white hover:text-white/80">How it Works</button>
+            <button onClick={() => scrollToSection('pricing')} className="text-left text-base font-semibold text-white hover:text-white/80">Pricing</button>
+            <button onClick={() => scrollToSection('contact')} className="text-left text-base font-semibold text-white hover:text-white/80">Contact Us</button>
+            <hr className="border-white/20" />
+            <button onClick={() => navigate('/login')} className="text-left text-base font-semibold text-white hover:text-white/80">Client Login</button>
           </div>
         )}
       </nav>
-
-      <main className="flex-1 flex flex-col items-center justify-start z-10 pt-24 pb-0 px-4">
+      <main className="flex-1 flex flex-col items-center justify-start z-10 pt-[104px] sm:pt-32 pb-0 px-4">
 
         {/* Hero Section */}
         <div id="home" className="w-full max-w-[1400px] mx-auto text-left relative mt-2 sm:mt-4 scroll-mt-32 px-2 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-12">
@@ -99,7 +99,7 @@ export default function LandingPage() {
               <Rocket className="w-4 h-4 text-indigo-600 fill-indigo-600" /> Grow Your Business
             </div>
 
-            <h1 className="text-4xl sm:text-5xl md:text-5xl font-extrabold tracking-tight mb-6 leading-[1.1] text-slate-900">
+            <h1 className="text-4xl sm:text-5xl md:text-5xl font-serif font-extrabold tracking-tight mb-6 leading-[1.1] text-slate-900">
               Turn Happy Customers <br /> into <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-500">Google Reviews, </span>
               automatically.
             </h1>
@@ -178,7 +178,7 @@ export default function LandingPage() {
                 <span className="text-white/80 text-sm font-bold uppercase tracking-wider mb-4 block">
                   Our Mission
                 </span>
-                <h2 className="text-3xl md:text-5xl font-extrabold mb-6 leading-tight text-white">We help good businesses get the reputation they've earned.</h2>
+                <h2 className="text-3xl md:text-5xl font-serif font-extrabold mb-6 leading-tight text-white">We help good businesses get the reputation they've earned.</h2>
                 <p className="text-white/90 text-lg leading-relaxed mb-8">
                   A single unfair review can outweigh years of good service. ReviewBoost makes it easy for satisfied customers to speak up, and routes private feedback to you first — so small issues get fixed before they become public ones.
                 </p>
@@ -210,7 +210,7 @@ export default function LandingPage() {
             <div className="bg-blue-50 text-blue-500 font-bold px-4 py-1.5 rounded-full text-xs mb-4 tracking-wider uppercase border border-blue-100">
               Simple Process
             </div>
-            <h2 className="text-4xl md:text-5xl font-extrabold mb-4 text-[#0B1A30] tracking-tight">How It Works</h2>
+            <h2 className="text-4xl md:text-5xl font-serif font-extrabold mb-4 text-[#0B1A30] tracking-tight">How It Works</h2>
             <p className="text-slate-500 text-lg max-w-2xl mx-auto">Get more Google reviews in just 3 easy steps.</p>
           </div>
 
@@ -342,7 +342,7 @@ export default function LandingPage() {
         <div id="pricing" className="w-[calc(100%+2rem)] lg:w-[calc(100%+10vw)] xl:w-[100vw] flex flex-col items-center mt-32 py-24" style={{ background: 'radial-gradient(ellipse 900px 500px at 50% -10%, #cfeaff, transparent), linear-gradient(180deg, #eaf6ff 0%, #f7fbff 60%, #ffffff 100%)' }}>
           <div className="max-w-[1000px] mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-[2.75rem] font-extrabold mb-4 text-[#0B1A30] tracking-tight">Simple Pricing. More Reviews. More Growth.</h2>
+              <h2 className="text-4xl md:text-[2.75rem] font-serif font-extrabold mb-4 text-[#0B1A30] tracking-tight">Simple Pricing. More Reviews. More Growth.</h2>
               <p className="text-slate-500 text-lg max-w-2xl mx-auto mb-8">Choose a plan that fits your business. Start collecting more Google reviews today.</p>
 
               <div className="flex flex-col items-center justify-center">
@@ -367,36 +367,36 @@ export default function LandingPage() {
 
                 <div className="h-px bg-slate-100 w-full mb-8"></div>
 
-                <ul className="space-y-4 mb-auto">
-                  <li className="flex items-start gap-3 text-slate-600 text-sm font-medium">
-                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 mt-0.5"><Check className="w-3 h-3 text-white" strokeWidth={3} /></div>
-                    Custom QR code design
-                  </li>
-                  <li className="flex items-start gap-3 text-slate-600 text-sm font-medium">
-                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 mt-0.5"><Check className="w-3 h-3 text-white" strokeWidth={3} /></div>
-                    Google Review collection
-                  </li>
-                  <li className="flex items-start gap-3 text-slate-600 text-sm font-medium">
-                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 mt-0.5"><Check className="w-3 h-3 text-white" strokeWidth={3} /></div>
-                    Customer review link
-                  </li>
-                  <li className="flex items-start gap-3 text-slate-600 text-sm font-medium">
-                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 mt-0.5"><Check className="w-3 h-3 text-white" strokeWidth={3} /></div>
-                    Review request tools
-                  </li>
-                  <li className="flex items-start gap-3 text-slate-600 text-sm font-medium">
-                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 mt-0.5"><Check className="w-3 h-3 text-white" strokeWidth={3} /></div>
-                    Basic business dashboard
-                  </li>
-                  <li className="flex items-start gap-3 text-slate-600 text-sm font-medium">
-                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 mt-0.5"><Check className="w-3 h-3 text-white" strokeWidth={3} /></div>
-                    Priority support
-                  </li>
-                  <li className="flex items-start gap-3 text-slate-600 text-sm font-medium">
-                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 mt-0.5"><Check className="w-3 h-3 text-white" strokeWidth={3} /></div>
-                    7 extra days FREE
-                  </li>
-                </ul>
+                <div className="space-y-3 mb-auto">
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-indigo-100 hover:shadow-sm transition-all group">
+                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 transition-colors"><Check className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white transition-colors" strokeWidth={3} /></div>
+                    <span className="text-slate-700 text-sm font-semibold">Custom QR code design</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-indigo-100 hover:shadow-sm transition-all group">
+                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 transition-colors"><Check className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white transition-colors" strokeWidth={3} /></div>
+                    <span className="text-slate-700 text-sm font-semibold">Google Review collection</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-indigo-100 hover:shadow-sm transition-all group">
+                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 transition-colors"><Check className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white transition-colors" strokeWidth={3} /></div>
+                    <span className="text-slate-700 text-sm font-semibold">Customer review link</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-indigo-100 hover:shadow-sm transition-all group">
+                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 transition-colors"><Check className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white transition-colors" strokeWidth={3} /></div>
+                    <span className="text-slate-700 text-sm font-semibold">Review request tools</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-indigo-100 hover:shadow-sm transition-all group">
+                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 transition-colors"><Check className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white transition-colors" strokeWidth={3} /></div>
+                    <span className="text-slate-700 text-sm font-semibold">Basic business dashboard</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-indigo-100 hover:shadow-sm transition-all group">
+                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 transition-colors"><Check className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white transition-colors" strokeWidth={3} /></div>
+                    <span className="text-slate-700 text-sm font-semibold">Priority support</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-indigo-100 hover:shadow-sm transition-all group">
+                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 transition-colors"><Check className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white transition-colors" strokeWidth={3} /></div>
+                    <span className="text-slate-700 text-sm font-semibold">7 extra days FREE</span>
+                  </div>
+                </div>
 
                 <p className="text-slate-400 text-xs mt-8 mb-4">Plus ₹1,499 one-time setup fee + 18% GST</p>
                 <button onClick={() => navigate('/signup?plan=6m')} className="w-full py-3.5 rounded-xl bg-[#F0F5FF] text-indigo-600 font-bold hover:bg-[#E5EEFF] transition-colors">Start Free Trial</button>
@@ -420,36 +420,36 @@ export default function LandingPage() {
 
                 <div className="h-px bg-slate-100 w-full mb-8"></div>
 
-                <ul className="space-y-4 mb-auto">
-                  <li className="flex items-start gap-3 text-slate-600 text-sm font-medium">
-                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 mt-0.5"><Check className="w-3 h-3 text-white" strokeWidth={3} /></div>
-                    Everything in 6 Months
-                  </li>
-                  <li className="flex items-start gap-3 text-slate-600 text-sm font-medium">
-                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 mt-0.5"><Check className="w-3 h-3 text-white" strokeWidth={3} /></div>
-                    Full-year access
-                  </li>
-                  <li className="flex items-start gap-3 text-slate-600 text-sm font-medium">
-                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 mt-0.5"><Check className="w-3 h-3 text-white" strokeWidth={3} /></div>
-                    Advanced review tracking
-                  </li>
-                  <li className="flex items-start gap-3 text-slate-600 text-sm font-medium">
-                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 mt-0.5"><Check className="w-3 h-3 text-white" strokeWidth={3} /></div>
-                    Review performance insights
-                  </li>
-                  <li className="flex items-start gap-3 text-slate-600 text-sm font-medium">
-                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 mt-0.5"><Check className="w-3 h-3 text-white" strokeWidth={3} /></div>
-                    Customer activity tracking
-                  </li>
-                  <li className="flex items-start gap-3 text-slate-600 text-sm font-medium">
-                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 mt-0.5"><Check className="w-3 h-3 text-white" strokeWidth={3} /></div>
-                    Priority support
-                  </li>
-                  <li className="flex items-start gap-3 text-slate-600 text-sm font-medium">
-                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 mt-0.5"><Check className="w-3 h-3 text-white" strokeWidth={3} /></div>
-                    8 extra days FREE
-                  </li>
-                </ul>
+                <div className="space-y-3 mb-auto">
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-indigo-50 bg-indigo-50/50 hover:bg-white hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-500/5 transition-all group">
+                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors"><Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /></div>
+                    <span className="text-slate-800 text-sm font-semibold">Everything in 6 Months</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-indigo-50 bg-indigo-50/50 hover:bg-white hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-500/5 transition-all group">
+                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors"><Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /></div>
+                    <span className="text-slate-800 text-sm font-semibold">Full-year access</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-indigo-50 bg-indigo-50/50 hover:bg-white hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-500/5 transition-all group">
+                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors"><Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /></div>
+                    <span className="text-slate-800 text-sm font-semibold">Advanced review tracking</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-indigo-50 bg-indigo-50/50 hover:bg-white hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-500/5 transition-all group">
+                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors"><Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /></div>
+                    <span className="text-slate-800 text-sm font-semibold">Review performance insights</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-indigo-50 bg-indigo-50/50 hover:bg-white hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-500/5 transition-all group">
+                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors"><Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /></div>
+                    <span className="text-slate-800 text-sm font-semibold">Customer activity tracking</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-indigo-50 bg-indigo-50/50 hover:bg-white hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-500/5 transition-all group">
+                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors"><Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /></div>
+                    <span className="text-slate-800 text-sm font-semibold">Priority support</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-indigo-50 bg-indigo-50/50 hover:bg-white hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-500/5 transition-all group">
+                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors"><Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /></div>
+                    <span className="text-slate-800 text-sm font-semibold">8 extra days FREE</span>
+                  </div>
+                </div>
 
                 <p className="text-slate-400 text-xs mt-8 mb-4">Plus ₹1,499 one-time setup fee + 18% GST</p>
                 <button onClick={() => navigate('/signup?plan=1y')} className="w-full py-3.5 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 transition-all">Start Free Trial</button>
@@ -464,7 +464,7 @@ export default function LandingPage() {
 
             {/* Left Side: Accordion */}
             <div className="flex flex-col">
-              <h2 className="text-4xl md:text-5xl font-extrabold text-[#0B1A30] mb-4 tracking-tight">
+              <h2 className="text-4xl md:text-5xl font-serif font-extrabold text-[#0B1A30] mb-4 tracking-tight">
                 Frequently Asked Questions
               </h2>
               <p className="text-slate-500 text-lg mb-10">
