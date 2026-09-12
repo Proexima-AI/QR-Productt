@@ -313,7 +313,7 @@ app.put('/api/feedback/:id/resolve', authenticate, async (req, res) => {
 // ========================
 // AI REVIEW ROUTES
 // ========================
-const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY || 'dummy_key' });
 
 app.post('/api/generate-review', async (req, res) => {
   const { businessName, category, rating, topics, instructions } = req.body;
@@ -549,7 +549,7 @@ app.post('/api/admin/tickets/:id/reply', authenticate, requireAdmin, async (req,
 // ========================
 
 const { OpenAI } = require('openai');
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || 'dummy_key' });
 
 app.post('/api/chat', async (req, res) => {
   const { sessionId, message, history } = req.body;
