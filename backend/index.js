@@ -22,8 +22,8 @@ app.use(express.json());
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
 
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
+  key_id: process.env.RAZORPAY_KEY_ID || 'dummy_key',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || 'dummy_secret',
 });
 
 // Middleware to authenticate JWT
