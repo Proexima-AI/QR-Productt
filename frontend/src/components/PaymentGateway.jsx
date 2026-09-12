@@ -40,6 +40,20 @@ export default function PaymentGateway({ onPaymentSuccess }) {
     }
   ];
 
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handlePayment = async (plan) => {
     setLoading(true);
     setError(null);
@@ -50,6 +64,13 @@ export default function PaymentGateway({ onPaymentSuccess }) {
     const totalAmount = subtotal + gst;
 
     try {
+      const isLoaded = await loadRazorpay();
+      if (!isLoaded) {
+        setError('Payment Gateway failed to load. Please check your internet connection or disable any ad-blockers.');
+        setLoading(false);
+        return;
+      }
+
       const order = await createRazorpayOrder(totalAmount, plan.id);
 
       const options = {
