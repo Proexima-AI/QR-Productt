@@ -140,6 +140,18 @@ async function initTablesMysql(pool) {
     );
   `;
 
+  const crmLeadsQuery = `
+    CREATE TABLE IF NOT EXISTS crm_leads (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      session_id VARCHAR(255),
+      name VARCHAR(255),
+      mobile VARCHAR(50),
+      business_name VARCHAR(255),
+      location VARCHAR(255),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+
   await pool.query(usersQuery);
   try {
     await pool.query("ALTER TABLE users ADD COLUMN subscription_ends_at TIMESTAMP NULL");
@@ -152,6 +164,7 @@ async function initTablesMysql(pool) {
   await pool.query(feedbackQuery);
   await pool.query(paymentsQuery);
   await pool.query(supportTicketsQuery);
+  await pool.query(crmLeadsQuery);
   console.log('✅ MySQL tables initialized.');
 }
 
@@ -255,6 +268,18 @@ function initTablesSqlite(database) {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    database.run(`
+      CREATE TABLE IF NOT EXISTS crm_leads (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT,
+        name TEXT,
+        mobile TEXT,
+        business_name TEXT,
+        location TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
     console.log('✅ SQLite tables initialized.');

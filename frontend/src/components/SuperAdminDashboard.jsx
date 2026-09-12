@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { LayoutDashboard, Users, CreditCard, MessageSquare, Save, Settings, X, Search, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, MessageSquare, Save, Settings, X, Search, ChevronRight, Bot, ClipboardList } from 'lucide-react';
 import axios from 'axios';
-
+import { API_URL } from '../services/apiService';
 export default function SuperAdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState({ totalUsers: 0, totalRevenue: 0, graphData: [] });
   const [users, setUsers] = useState([]);
   const [tickets, setTickets] = useState([]);
+  const [chats, setChats] = useState([]);
+  const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Edit User Modal
@@ -31,14 +33,20 @@ export default function SuperAdminDashboard() {
       const headers = { Authorization: `Bearer ${token}` };
 
       if (activeTab === 'overview') {
-        const { data } = await axios.get('/api/admin/stats', { headers });
+        const { data } = await axios.get(`${API_URL}/admin/stats`, { headers });
         setStats(data);
       } else if (activeTab === 'customers') {
-        const { data } = await axios.get('/api/admin/users', { headers });
+        const { data } = await axios.get(`${API_URL}/admin/users`, { headers });
         setUsers(data);
       } else if (activeTab === 'support') {
-        const { data } = await axios.get('/api/admin/tickets', { headers });
+        const { data } = await axios.get(`${API_URL}/admin/tickets`, { headers });
         setTickets(data);
+      } else if (activeTab === 'chats') {
+        const { data } = await axios.get(`${API_URL}/admin/chats`, { headers });
+        setChats(data);
+      } else if (activeTab === 'leads') {
+        const { data } = await axios.get(`${API_URL}/admin/leads`, { headers });
+        setLeads(data);
       }
     } catch (err) {
       if (err.response?.status === 403) {
@@ -55,7 +63,7 @@ export default function SuperAdminDashboard() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`/api/admin/users/${editingUser.id}`, {
+      await axios.put(`${API_URL}/admin/users/${editingUser.id}`, {
         role: editingUser.role,
         subscription_ends_at: editingUser.subscription_ends_at
       }, { headers: { Authorization: `Bearer ${token}` } });
@@ -70,7 +78,7 @@ export default function SuperAdminDashboard() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`/api/admin/tickets/${replyingTicket.id}/reply`, {
+      await axios.post(`${API_URL}/admin/tickets/${replyingTicket.id}/reply`, {
         reply: replyMessage
       }, { headers: { Authorization: `Bearer ${token}` } });
       setReplyingTicket(null);
@@ -115,6 +123,22 @@ export default function SuperAdminDashboard() {
           >
             <MessageSquare className="w-5 h-5" /> Support Chat
           </button>
+          <button
+            onClick={() => setActiveTab('chats')}
+            className={`w-full text-left px-4 py-3 rounded-xl font-bold flex items-center gap-3 transition-all ${
+              activeTab === 'chats' ? 'bg-amber-500/10 text-amber-500' : 'hover:bg-slate-900 hover:text-white'
+            }`}
+          >
+            <Bot className="w-5 h-5" /> AI Live Chats
+          </button>
+          <button
+            onClick={() => setActiveTab('leads')}
+            className={`w-full text-left px-4 py-3 rounded-xl font-bold flex items-center gap-3 transition-all ${
+              activeTab === 'leads' ? 'bg-amber-500/10 text-amber-500' : 'hover:bg-slate-900 hover:text-white'
+            }`}
+          >
+            <ClipboardList className="w-5 h-5" /> CRM Leads
+          </button>
         </nav>
         <div className="p-4 border-t border-slate-900">
           <button onClick={() => navigate('/dashboard')} className="w-full text-sm text-slate-500 hover:text-white font-medium flex items-center justify-between">
@@ -148,7 +172,7 @@ export default function SuperAdminDashboard() {
                   <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm relative overflow-hidden group">
                     <div className="absolute right-0 top-0 p-4 opacity-5"><CreditCard className="w-24 h-24" /></div>
                     <span className="text-sm font-bold text-slate-400 uppercase tracking-wider block mb-2 relative z-10">Total Revenue</span>
-                    <div className="text-5xl font-black text-emerald-600 relative z-10">₹{stats.totalRevenue.toLocaleString()}</div>
+                    <div className="text-5xl font-black text-emerald-600 relative z-10">₹{stats?.totalRevenue?.toLocaleString() || 0}</div>
                   </div>
                 </div>
 
@@ -301,6 +325,93 @@ export default function SuperAdminDashboard() {
                         <p className="font-medium">Select a ticket to view conversation</p>
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* CHATS TAB */}
+            {activeTab === 'chats' && (
+              <div className="space-y-8">
+                <div>
+                  <h2 className="text-3xl font-black text-slate-900">AI Live Chats</h2>
+                  <p className="text-slate-500 font-medium">Monitor conversations between users and the Proexima Assistant.</p>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {chats.map(session => (
+                    <div key={session.sessionId} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col max-h-[500px]">
+                      <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-4">
+                        <div>
+                          <h3 className="font-bold text-slate-900">Session ID</h3>
+                          <p className="text-xs text-slate-500">{session.sessionId}</p>
+                        </div>
+                        <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-md">
+                          {new Date(session.lastActivity).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                        {session.messages.map(msg => (
+                          <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`text-sm px-4 py-2.5 rounded-2xl max-w-[85%] ${
+                              msg.role === 'user' 
+                                ? 'bg-slate-900 text-white rounded-br-sm' 
+                                : 'bg-amber-50 text-slate-800 border border-amber-100 rounded-bl-sm'
+                            }`}>
+                              <span className="text-[10px] uppercase font-bold opacity-50 block mb-1">
+                                {msg.role === 'user' ? 'Customer' : 'AI Assistant'}
+                              </span>
+                              {msg.message}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {chats.length === 0 && (
+                     <div className="col-span-full py-10 text-center text-slate-500 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                       No chat sessions found.
+                     </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* LEADS TAB */}
+            {activeTab === 'leads' && (
+              <div className="space-y-8">
+                <div>
+                  <h2 className="text-3xl font-black text-slate-900">CRM Leads</h2>
+                  <p className="text-slate-500 font-medium">Leads automatically captured by the AI Assistant.</p>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead className="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                          <th className="p-5 font-bold text-slate-900">Name</th>
+                          <th className="p-5 font-bold text-slate-900">Mobile</th>
+                          <th className="p-5 font-bold text-slate-900">Business</th>
+                          <th className="p-5 font-bold text-slate-900">Location</th>
+                          <th className="p-5 font-bold text-slate-900">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {leads.map(lead => (
+                          <tr key={lead.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="p-5 font-bold text-slate-900">{lead.name}</td>
+                            <td className="p-5 font-medium text-slate-600">{lead.mobile}</td>
+                            <td className="p-5 font-medium text-slate-600">{lead.business_name}</td>
+                            <td className="p-5 font-medium text-slate-600">{lead.location}</td>
+                            <td className="p-5 font-medium text-slate-500 text-sm">{new Date(lead.created_at).toLocaleString()}</td>
+                          </tr>
+                        ))}
+                        {leads.length === 0 && (
+                          <tr>
+                            <td colSpan="5" className="p-8 text-center text-slate-500 font-medium">No leads captured yet.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>

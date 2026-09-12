@@ -9,6 +9,7 @@ import QRCodeGenerator from './components/QRCodeGenerator';
 import OnboardingSetup from './components/OnboardingSetup';
 import PaymentGateway from './components/PaymentGateway';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
+import ChatbotWidget from './components/ChatbotWidget';
 import { getMyBusiness, getMyFeedback, getBusinessById, submitFeedback, resolveFeedback, updateMyBusiness, getGoogleReviews } from './services/apiService';
 import { ShieldCheck, Clock } from 'lucide-react';
 
@@ -167,6 +168,7 @@ export default function App() {
         <Route path="/r/:businessId" element={<PublicReviewPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <ChatbotWidget />
     </BrowserRouter>
   );
 }

@@ -544,6 +544,128 @@ app.post('/api/admin/tickets/:id/reply', authenticate, requireAdmin, async (req,
   }
 });
 
+// ========================
+// CHATBOT ROUTES
+// ========================
+
+const { OpenAI } = require('openai');
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+app.post('/api/chat', async (req, res) => {
+  const { sessionId, message, history } = req.body;
+  try {
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Session ID is required' });
+    }
+    
+    // Save user message to DB
+    await query('INSERT INTO chat_logs (session_id, message, role) VALUES (?, ?, ?)', [sessionId, message, 'user']);
+
+    const systemInstruction = "You are an intelligent, customer-centric sales assistant for 'Proexima QR Review SaaS'. Your primary goal is to answer questions, dynamically relate everything back to our QR code review platform, and persuade the user to sign up or buy. ONCE you have sufficiently answered their questions, seamlessly transition to collecting their contact info as a lead. Ask for their Name, Mobile Number (must be digits only), Business Name, and Location. When all 4 pieces of information are gathered, you MUST call the `save_crm_lead` tool. Do not ask for all 4 at once; make it a natural conversation.";
+
+    let messages = [
+      { role: "system", content: systemInstruction }
+    ];
+
+    if (history && history.length > 0) {
+      const formattedHistory = history.map(h => ({
+        role: h.role === 'user' ? 'user' : 'assistant',
+        content: h.message
+      }));
+      messages = messages.concat(formattedHistory);
+    }
+    messages.push({ role: 'user', content: message });
+
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "save_crm_lead",
+          description: "Save the user's lead information into the CRM once Name, Mobile, Business, and Location have all been collected.",
+          parameters: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "The customer's name" },
+              mobile: { type: "string", description: "The customer's mobile number, strictly digits (e.g. 1234567890)" },
+              business_name: { type: "string", description: "The name of their business" },
+              location: { type: "string", description: "The location of their business" }
+            },
+            required: ["name", "mobile", "business_name", "location"]
+          }
+        }
+      }
+    ];
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: messages,
+      tools: tools,
+      tool_choice: "auto",
+      temperature: 0.7
+    });
+
+    const choice = completion.choices[0];
+    let botReply = choice.message.content || "";
+
+    if (choice.finish_reason === "tool_calls" || (choice.message.tool_calls && choice.message.tool_calls.length > 0)) {
+      const toolCall = choice.message.tool_calls[0];
+      if (toolCall.function.name === "save_crm_lead") {
+        const args = JSON.parse(toolCall.function.arguments);
+        
+        // Validate mobile number to ensure it has no characters
+        const mobileRegex = /^[0-9]+$/;
+        if (!mobileRegex.test(args.mobile)) {
+          botReply = "Please provide a valid mobile number with only digits.";
+        } else {
+          await query('INSERT INTO crm_leads (session_id, name, mobile, business_name, location) VALUES (?, ?, ?, ?, ?)', [sessionId, args.name, args.mobile, args.business_name, args.location]);
+          botReply = "Thank you! I've saved your information, and our team will be in touch with you shortly. Is there anything else you need help with?";
+        }
+      }
+    }
+
+    // Save bot message to DB
+    await query('INSERT INTO chat_logs (session_id, message, role) VALUES (?, ?, ?)', [sessionId, botReply, 'model']);
+
+    res.json({ reply: botReply });
+  } catch (error) {
+    console.error("Chat Error:", error);
+    res.status(500).json({ error: 'Failed to process chat' });
+  }
+});
+
+app.get('/api/admin/leads', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const leads = await query('SELECT * FROM crm_leads ORDER BY created_at DESC');
+    res.json(leads);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch CRM leads' });
+  }
+});
+
+app.get('/api/admin/chats', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const logs = await query('SELECT * FROM chat_logs ORDER BY created_at ASC');
+    // Group by session
+    const sessions = logs.reduce((acc, log) => {
+      if (!acc[log.session_id]) acc[log.session_id] = [];
+      acc[log.session_id].push(log);
+      return acc;
+    }, {});
+    
+    // Convert to array and sort by latest activity
+    const sessionsArray = Object.keys(sessions).map(id => ({
+      sessionId: id,
+      messages: sessions[id],
+      lastActivity: sessions[id][sessions[id].length - 1].created_at
+    })).sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity));
+
+    res.json(sessionsArray);
+  } catch (error) {
+    console.error("Fetch chats error:", error);
+    res.status(500).json({ error: 'Failed to fetch chats' });
+  }
+});
+
 const PORT = process.env.PORT || 5001;
 // START SERVER
 app.listen(PORT, () => {

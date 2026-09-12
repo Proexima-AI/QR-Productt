@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use VITE_API_URL from environment for Cloudflare deployment, fallback to localhost for dev
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 // Config with Auth Header
 const getAuthHeaders = () => {
@@ -82,6 +82,11 @@ export const generateReviewBackend = async (data) => {
   // data: { businessName, category, rating, topics, instructions }
   const res = await axios.post(`${API_URL}/generate-review`, data);
   return res.data.review;
+};
+
+export const sendChatMessage = async (data) => {
+  const res = await axios.post(`${API_URL}/chat`, data);
+  return res.data;
 };
 
 // ========================
