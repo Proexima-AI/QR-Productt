@@ -191,16 +191,54 @@ app.post('/api/business/:id/stats/scan', async (req, res) => {
 // PAYMENT ROUTES
 // ========================
 
+// app.post('/api/payment/create-order', authenticate, async (req, res) => {
+//   const { amount, plan } = req.body;
+//   try {
+//     const options = {
+//       amount: Math.round(amount * 100), // amount in the smallest currency unit
+//       currency: "INR",
+//       receipt: `receipt_${req.user.id}_${Date.now()}`
+//     };
+//     const order = await razorpay.orders.create(options);
+//     res.json(order);
+//   } catch (error) {
+//     console.error('Razorpay Create Order Error:', error);
+//     res.status(500).json({ error: 'Could not create order' });
+//   }
+// });
+
 app.post('/api/payment/create-order', authenticate, async (req, res) => {
   const { amount, plan } = req.body;
+
   try {
     const options = {
-      amount: Math.round(amount * 100), // amount in the smallest currency unit
+      amount: Math.round(amount * 100),
       currency: "INR",
       receipt: `receipt_${req.user.id}_${Date.now()}`
     };
-    const order = await razorpay.orders.create(options);
+
+    const response = await fetch('https://api.razorpay.com/v1/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${btoa(
+          `${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`
+        )}`
+      },
+      body: JSON.stringify(options)
+    });
+
+    const order = await response.json();
+
+    if (!response.ok) {
+      console.error('Razorpay Create Order Error:', order);
+      return res.status(response.status).json({
+        error: 'Could not create order'
+      });
+    }
+
     res.json(order);
+
   } catch (error) {
     console.error('Razorpay Create Order Error:', error);
     res.status(500).json({ error: 'Could not create order' });
