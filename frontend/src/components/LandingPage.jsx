@@ -20,7 +20,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      setScrolled(window.scrollY > 300);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -38,7 +38,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900 flex flex-col overflow-x-hidden">
 
       {/* Navbar */}
-      <nav className={`fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-[1400px] z-50 transition-all duration-300 bg-[#0A39AB] rounded-full shadow-lg border border-transparent`}>
+      <nav className={`fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-[1400px] z-50 transition-all duration-500 rounded-full border ${scrolled ? 'bg-[#0A39AB]/60 backdrop-blur-md border-white/20 shadow-md' : 'bg-[#0A39AB] border-transparent shadow-lg'}`}>
         <div className="px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => scrollToSection('home')}>
             <Star className="w-8 h-8 text-white fill-white" />
@@ -51,7 +51,7 @@ export default function LandingPage() {
             <button onClick={() => scrollToSection('about')} className="text-sm font-medium text-white hover:text-white/80 transition-colors">About</button>
             <button onClick={() => scrollToSection('how-it-works')} className="text-sm font-medium text-white hover:text-white/80 transition-colors">How it Works</button>
             <button onClick={() => scrollToSection('pricing')} className="text-sm font-medium text-white hover:text-white/80 transition-colors">Pricing</button>
-            <button onClick={() => scrollToSection('contact')} className="text-sm font-medium text-white hover:text-white/80 transition-colors">Contact Us</button>
+            <button onClick={() => navigate('/contact')} className="text-sm font-medium text-white hover:text-white/80 transition-colors">Contact Us</button>
           </div>
 
           <div className="flex items-center gap-4 sm:gap-6">
@@ -79,13 +79,13 @@ export default function LandingPage() {
             <button onClick={() => scrollToSection('about')} className="text-left text-base font-semibold text-white hover:text-white/80">About</button>
             <button onClick={() => scrollToSection('how-it-works')} className="text-left text-base font-semibold text-white hover:text-white/80">How it Works</button>
             <button onClick={() => scrollToSection('pricing')} className="text-left text-base font-semibold text-white hover:text-white/80">Pricing</button>
-            <button onClick={() => scrollToSection('contact')} className="text-left text-base font-semibold text-white hover:text-white/80">Contact Us</button>
+            <button onClick={() => { navigate('/contact'); setMobileMenuOpen(false); }} className="text-left text-base font-semibold text-white hover:text-white/80">Contact Us</button>
             <hr className="border-white/20" />
             <button onClick={() => navigate('/login')} className="text-left text-base font-semibold text-white hover:text-white/80">Client Login</button>
           </div>
         )}
       </nav>
-      <main className="flex-1 flex flex-col items-center justify-start z-10 pt-[104px] sm:pt-32 pb-0 px-4">
+      <main className="flex-1 flex flex-col items-center justify-start z-20 pt-[104px] sm:pt-32 pb-0 px-4">
 
         {/* Hero Section */}
         <div id="home" className="w-full max-w-[1400px] mx-auto text-left relative mt-2 sm:mt-4 scroll-mt-32 px-2 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-12">
@@ -351,108 +351,97 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch max-w-4xl mx-auto relative mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch max-w-4xl mx-auto relative mt-8">
 
               {/* 6 Months Plan */}
-              <div className="bg-white rounded-3xl p-10 shadow-sm border border-slate-100 flex flex-col relative z-10">
-                <h3 className="text-2xl font-bold text-slate-900 mb-1">6 Months - ₹1,794</h3>
-                <p className="text-slate-400 text-sm mb-6">Best for getting started</p>
-
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-slate-300 text-lg line-through decoration-slate-300">₹2,094</span>
-                  <span className="text-4xl font-extrabold text-slate-900">₹1,794</span>
-                  <span className="text-slate-500 font-medium text-sm">total</span>
+              <div className="bg-slate-50/80 backdrop-blur-sm rounded-[2rem] p-3 md:p-3 border border-slate-200 flex flex-col shadow-sm">
+                {/* Top Inner Box */}
+                <div className="bg-white rounded-[1.5rem] p-8 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100">
+                  <h3 className="text-xl font-semibold text-slate-800 mb-6">6 Months</h3>
+                  <div className="flex items-baseline gap-2 mb-4">
+                    <span className="text-5xl font-bold text-[#0B1A30] tracking-tight">₹299</span>
+                    <span className="text-slate-500 font-medium">/month</span>
+                  </div>
+                  <p className="text-slate-500 text-sm leading-relaxed mb-1">
+                    Billed as ₹1,794 for 6 months. Best for getting started.
+                  </p>
+                  <p className="text-slate-400 text-xs">
+                    Plus ₹1,499 one-time setup fee + 18% GST
+                  </p>
                 </div>
-                <div className="text-indigo-600 font-bold text-sm mb-8">₹299/month</div>
-
-                <div className="h-px bg-slate-100 w-full mb-8"></div>
-
-                <div className="space-y-3 mb-auto">
-                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-indigo-100 hover:shadow-sm transition-all group">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 transition-colors"><Check className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white transition-colors" strokeWidth={3} /></div>
-                    <span className="text-slate-700 text-sm font-semibold">Custom QR code design</span>
+                
+                {/* Bottom Inner Box */}
+                <div className="bg-white rounded-[1.5rem] p-8 mt-3 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100 flex flex-col flex-1">
+                  <h4 className="text-[#0B1A30] font-medium mb-6">Features included:</h4>
+                  
+                  <div className="space-y-4 mb-10">
+                    {[
+                      'Custom QR code design',
+                      'Google Review collection',
+                      'Customer review link',
+                      'Review request tools',
+                      'Basic business dashboard',
+                      'Priority support',
+                      '7 extra days FREE'
+                    ].map((feature, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-indigo-500 shrink-0" strokeWidth={2.5} />
+                        <span className="text-slate-600 text-sm font-medium">{feature}</span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-indigo-100 hover:shadow-sm transition-all group">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 transition-colors"><Check className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white transition-colors" strokeWidth={3} /></div>
-                    <span className="text-slate-700 text-sm font-semibold">Google Review collection</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-indigo-100 hover:shadow-sm transition-all group">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 transition-colors"><Check className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white transition-colors" strokeWidth={3} /></div>
-                    <span className="text-slate-700 text-sm font-semibold">Customer review link</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-indigo-100 hover:shadow-sm transition-all group">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 transition-colors"><Check className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white transition-colors" strokeWidth={3} /></div>
-                    <span className="text-slate-700 text-sm font-semibold">Review request tools</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-indigo-100 hover:shadow-sm transition-all group">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 transition-colors"><Check className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white transition-colors" strokeWidth={3} /></div>
-                    <span className="text-slate-700 text-sm font-semibold">Basic business dashboard</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-indigo-100 hover:shadow-sm transition-all group">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 transition-colors"><Check className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white transition-colors" strokeWidth={3} /></div>
-                    <span className="text-slate-700 text-sm font-semibold">Priority support</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-indigo-100 hover:shadow-sm transition-all group">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 transition-colors"><Check className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white transition-colors" strokeWidth={3} /></div>
-                    <span className="text-slate-700 text-sm font-semibold">7 extra days FREE</span>
-                  </div>
+                  
+                  <button onClick={() => navigate('/signup?plan=6m')} className="mt-auto w-full py-4 rounded-xl bg-[#1A2E4C] text-white font-semibold hover:bg-[#112036] transition-colors shadow-sm">
+                    Start 7 Days Free Trial
+                  </button>
                 </div>
-
-                <p className="text-slate-400 text-xs mt-8 mb-4">Plus ₹1,499 one-time setup fee + 18% GST</p>
-                <button onClick={() => navigate('/signup?plan=6m')} className="w-full py-3.5 rounded-xl bg-[#F0F5FF] text-indigo-600 font-bold hover:bg-[#E5EEFF] transition-colors">Start Free Trial</button>
               </div>
 
               {/* 1 Year Plan */}
-              <div className="bg-white rounded-3xl p-10 shadow-xl shadow-indigo-600/5 border-2 border-indigo-500 flex flex-col relative z-10 scale-100 md:scale-[1.02]">
-                <div className="absolute -top-4 right-8 bg-indigo-500 text-white text-xs font-bold px-4 py-1.5 rounded-full flex items-center gap-1 shadow-md shadow-indigo-500/30">
-                  <Star className="w-3.5 h-3.5 fill-[#FBBC05] text-[#FBBC05]" /> Best Value
+              <div className="bg-slate-50/80 backdrop-blur-sm rounded-[2rem] p-3 md:p-3 border border-slate-200 flex flex-col shadow-sm">
+                {/* Top Inner Box */}
+                <div className="bg-white rounded-[1.5rem] p-8 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100 relative">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-semibold text-slate-800">1 Year</h3>
+                    <span className="bg-[#E91E63] text-white text-[11px] uppercase tracking-wider font-bold px-3 py-1 rounded-full">Popular</span>
+                  </div>
+                  <div className="flex items-baseline gap-2 mb-4">
+                    <span className="text-5xl font-bold text-[#0B1A30] tracking-tight">₹291</span>
+                    <span className="text-slate-500 font-medium">/month</span>
+                  </div>
+                  <p className="text-slate-500 text-sm leading-relaxed mb-1">
+                    Billed as ₹2,988 for 1 year. Best value for your business.
+                  </p>
+                  <p className="text-slate-400 text-xs">
+                    Plus ₹1,499 one-time setup fee + 18% GST
+                  </p>
                 </div>
-
-                <h3 className="text-2xl font-bold text-slate-900 mb-1">1 Year - ₹2,988</h3>
-                <p className="text-slate-400 text-sm mb-6">Best Value</p>
-
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-slate-300 text-lg line-through decoration-slate-300">₹3,588</span>
-                  <span className="text-4xl font-extrabold text-slate-900">₹2,988</span>
-                  <span className="text-slate-500 font-medium text-sm">total</span>
+                
+                {/* Bottom Inner Box */}
+                <div className="bg-white rounded-[1.5rem] p-8 mt-3 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100 flex flex-col flex-1">
+                  <h4 className="text-[#0B1A30] font-medium mb-6">Features included:</h4>
+                  
+                  <div className="space-y-4 mb-10">
+                    {[
+                      'Everything in 6 Months',
+                      'Full-year access',
+                      'Advanced review tracking',
+                      'Review performance insights',
+                      'Customer activity tracking',
+                      'Priority support',
+                      '8 extra days FREE'
+                    ].map((feature, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-indigo-500 shrink-0" strokeWidth={2.5} />
+                        <span className="text-slate-600 text-sm font-medium">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <button onClick={() => navigate('/signup?plan=1y')} className="mt-auto w-full py-4 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition-all">
+                    Start 7 Days Free Trial
+                  </button>
                 </div>
-                <div className="text-indigo-600 font-bold text-sm mb-8">₹291/month</div>
-
-                <div className="h-px bg-slate-100 w-full mb-8"></div>
-
-                <div className="space-y-3 mb-auto">
-                  <div className="flex items-center gap-3 p-3 rounded-xl border border-indigo-50 bg-indigo-50/50 hover:bg-white hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-500/5 transition-all group">
-                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors"><Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /></div>
-                    <span className="text-slate-800 text-sm font-semibold">Everything in 6 Months</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl border border-indigo-50 bg-indigo-50/50 hover:bg-white hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-500/5 transition-all group">
-                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors"><Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /></div>
-                    <span className="text-slate-800 text-sm font-semibold">Full-year access</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl border border-indigo-50 bg-indigo-50/50 hover:bg-white hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-500/5 transition-all group">
-                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors"><Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /></div>
-                    <span className="text-slate-800 text-sm font-semibold">Advanced review tracking</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl border border-indigo-50 bg-indigo-50/50 hover:bg-white hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-500/5 transition-all group">
-                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors"><Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /></div>
-                    <span className="text-slate-800 text-sm font-semibold">Review performance insights</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl border border-indigo-50 bg-indigo-50/50 hover:bg-white hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-500/5 transition-all group">
-                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors"><Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /></div>
-                    <span className="text-slate-800 text-sm font-semibold">Customer activity tracking</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl border border-indigo-50 bg-indigo-50/50 hover:bg-white hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-500/5 transition-all group">
-                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors"><Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /></div>
-                    <span className="text-slate-800 text-sm font-semibold">Priority support</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl border border-indigo-50 bg-indigo-50/50 hover:bg-white hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-500/5 transition-all group">
-                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors"><Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /></div>
-                    <span className="text-slate-800 text-sm font-semibold">8 extra days FREE</span>
-                  </div>
-                </div>
-
-                <p className="text-slate-400 text-xs mt-8 mb-4">Plus ₹1,499 one-time setup fee + 18% GST</p>
-                <button onClick={() => navigate('/signup?plan=1y')} className="w-full py-3.5 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 transition-all">Start Free Trial</button>
               </div>
             </div>
           </div>
@@ -506,29 +495,29 @@ export default function LandingPage() {
         </div>
 
         {/* Contact Section */}
-        <div id="contact" className="w-[calc(100%+2rem)] lg:w-[calc(100%+10vw)] xl:w-[100vw] flex flex-col items-center py-16 px-4">
-          <div className="w-full max-w-[1100px] mx-auto flex flex-col md:flex-row bg-white rounded-[2.5rem] border border-slate-200 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.05)] overflow-hidden">
+        <div id="contact" className="w-[calc(100%+2rem)] lg:w-[calc(100%+10vw)] xl:w-[100vw] flex flex-col items-center pt-16 pb-0 px-4 relative z-20 -mb-24 md:-mb-40">
+          <div className="w-full max-w-[1100px] mx-auto flex flex-col md:flex-row bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl overflow-hidden">
 
             {/* Left Panel */}
-            <div className="w-full md:w-[45%] bg-gradient-to-br from-[#4F46E5] to-[#3730A3] p-12 md:p-16 flex flex-col justify-center relative overflow-hidden">
+            <div className="w-full md:w-[45%] bg-gradient-to-br from-[#4F46E5] to-[#3730A3] p-10 md:p-12 flex flex-col justify-center relative overflow-hidden">
               {/* Glow Effect */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-400/20 blur-3xl rounded-full pointer-events-none transform translate-x-1/4 -translate-y-1/4"></div>
 
               <div className="relative z-10">
-                <div className="text-indigo-200 text-xs font-bold tracking-[0.2em] uppercase mb-6">Contact</div>
-                <h2 className="text-4xl md:text-5xl font-serif text-white mb-6 leading-[1.1] font-bold">Got Questions?<br />We're Here.</h2>
-                <p className="text-indigo-100 text-base md:text-lg leading-relaxed opacity-90 max-w-sm">
+                <div className="text-indigo-200 text-xs font-bold tracking-[0.2em] uppercase mb-4">Contact</div>
+                <h2 className="text-3xl md:text-4xl font-serif text-white mb-4 leading-[1.1] font-bold">Got Questions?<br />We're Here.</h2>
+                <p className="text-indigo-100 text-sm md:text-base leading-relaxed opacity-90 max-w-sm">
                   Ready to take control of your online reputation? Our team is available to help you set up and scale your business.
                 </p>
               </div>
             </div>
 
             {/* Right Panel */}
-            <div className="w-full md:w-[55%] bg-white p-10 md:p-16 flex flex-col justify-center">
+            <div className="w-full md:w-[55%] bg-white p-8 md:p-10 flex flex-col justify-center">
               <div className="flex flex-col w-full">
 
                 {/* Row 1 */}
-                <div className="group flex items-center justify-between py-6 border-b border-slate-100 hover:border-indigo-100 transition-colors cursor-pointer">
+                <div onClick={() => window.location.href = 'mailto:info@proeximaai.com'} className="group flex items-center justify-between py-4 border-b border-slate-100 hover:border-indigo-100 transition-colors cursor-pointer">
                   <div className="flex items-center gap-8">
                     <span className="text-indigo-500 font-bold text-sm w-6 tracking-wider">01</span>
                     <div className="flex flex-col gap-0.5">
@@ -542,7 +531,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* Row 2 */}
-                <div className="group flex items-center justify-between py-6 border-b border-slate-100 hover:border-indigo-100 transition-colors cursor-pointer">
+                <div className="group flex items-center justify-between py-4 border-b border-slate-100 hover:border-indigo-100 transition-colors cursor-pointer">
                   <div className="flex items-center gap-8">
                     <span className="text-indigo-500 font-bold text-sm w-6 tracking-wider">02</span>
                     <div className="flex flex-col gap-0.5">
@@ -556,7 +545,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* Row 3 */}
-                <div className="group flex items-center justify-between py-6 cursor-pointer">
+                <div className="group flex items-center justify-between py-4 cursor-pointer">
                   <div className="flex items-center gap-8">
                     <span className="text-indigo-500 font-bold text-sm w-6 tracking-wider">03</span>
                     <div className="flex flex-col gap-0.5">
@@ -577,7 +566,7 @@ export default function LandingPage() {
       </main>
 
       {/* Expanded Footer Section */}
-      <footer className="w-full bg-[#16261F] text-[#F5F7F1]/60 pt-16 pb-8 border-t border-[#F5F7F1]/10 z-10">
+      <footer className="w-full bg-[#16261F] text-[#F5F7F1]/60 pt-36 md:pt-56 pb-8 border-t border-[#F5F7F1]/10 relative z-10">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
 
           <div className="col-span-1 md:col-span-1">
@@ -589,10 +578,16 @@ export default function LandingPage() {
               The industry-standard AI engine for generating authentic Google Reviews and protecting your local reputation.
             </p>
             <div className="flex gap-4">
-              {/* Social Icons Placeholder */}
-              <div className="w-8 h-8 rounded-full bg-[#16261F]/90 flex items-center justify-center hover:bg-indigo-600 transition-colors cursor-pointer"><span className="text-white text-xs">FB</span></div>
-              <div className="w-8 h-8 rounded-full bg-[#16261F]/90 flex items-center justify-center hover:bg-indigo-600 transition-colors cursor-pointer"><span className="text-white text-xs">IG</span></div>
-              <div className="w-8 h-8 rounded-full bg-[#16261F]/90 flex items-center justify-center hover:bg-indigo-600 transition-colors cursor-pointer"><span className="text-white text-xs">X</span></div>
+              {/* Social Icons */}
+              <a href="https://www.facebook.com/profile.php?id=61593399778411" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full bg-[#16261F]/90 flex items-center justify-center hover:bg-indigo-600 transition-colors cursor-pointer">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+              </a>
+              <div className="w-8 h-8 rounded-full bg-[#16261F]/90 flex items-center justify-center hover:bg-indigo-600 transition-colors cursor-pointer">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+              </div>
+              <a href="https://www.linkedin.com/company/112719291/admin/dashboard/" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full bg-[#16261F]/90 flex items-center justify-center hover:bg-indigo-600 transition-colors cursor-pointer">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-white"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+              </a>
             </div>
           </div>
 
@@ -610,7 +605,7 @@ export default function LandingPage() {
             <h4 className="text-white font-bold mb-4">Company</h4>
             <ul className="space-y-2 text-sm">
               <li><button onClick={() => scrollToSection('about')} className="hover:text-white transition-colors">About Us</button></li>
-              <li><button onClick={() => scrollToSection('contact')} className="hover:text-white transition-colors">Contact</button></li>
+              <li><button onClick={() => navigate('/contact')} className="hover:text-white transition-colors">Contact</button></li>
               <li><button className="hover:text-white transition-colors">Privacy Policy</button></li>
               <li><button className="hover:text-white transition-colors">Terms of Service</button></li>
             </ul>

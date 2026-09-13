@@ -10,6 +10,7 @@ import OnboardingSetup from './components/OnboardingSetup';
 import PaymentGateway from './components/PaymentGateway';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
 import ChatbotWidget from './components/ChatbotWidget';
+import ContactUs from './components/ContactUs';
 import { getMyBusiness, getMyFeedback, getBusinessById, submitFeedback, resolveFeedback, updateMyBusiness, getGoogleReviews } from './services/apiService';
 import { ShieldCheck, Clock } from 'lucide-react';
 
@@ -157,6 +158,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/contact" element={<ContactUs />} />
         <Route path="/admin" element={
           <ProtectedRoute>
             <SuperAdminDashboard />
