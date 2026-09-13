@@ -1,7 +1,7 @@
 const express = require('express');
 const { GoogleGenAI } = require('@google/genai');
 const { google } = require('googleapis');
-const cron = require('node-cron');
+// const cron = require('node-cron');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -395,7 +395,8 @@ app.get('/api/google/reviews', authenticate, async (req, res) => {
 // ========================
 
 // Run every minute for testing, normally you'd run this less frequently
-cron.schedule('* * * * *', async () => {
+// cron.schedule('* * * * *', async () => {
+async function runAutoReplyJob() {
   try {
     // 1. Find all businesses that have auto_reply enabled and have tokens
     const businesses = await query('SELECT * FROM businesses WHERE auto_reply_enabled = 1 OR auto_reply_enabled = true');
@@ -445,7 +446,7 @@ cron.schedule('* * * * *', async () => {
   } catch (err) {
     console.error('Error in Auto-Reply Cron:', err);
   }
-});
+};
 
 // Temporary Route for Testing: Admin bypass to activate a user account
 app.get('/api/admin/activate/:email', async (req, res) => {
@@ -666,8 +667,11 @@ app.get('/api/admin/chats', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 5001;
-// START SERVER
-app.listen(PORT, () => {
-  console.log(`🚀 Backend running on http://localhost:${PORT}`);
-});
+// const PORT = process.env.PORT || 5001;
+// // START SERVER
+// app.listen(PORT, () => {
+//   console.log(`🚀 Backend running on http://localhost:${PORT}`);
+// });
+
+app.runAutoReplyJob = runAutoReplyJob;
+module.exports = app;

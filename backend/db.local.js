@@ -1,18 +1,48 @@
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 const mysql = require('mysql2/promise');
+require('dotenv').config();
 
-let hyperdrive;
-let initialized = false;
-let initializing = null;
+// Attempt to connect to MySQL. If it fails, fallback to SQLite for local development.
+let db;
+let isMysql = false;
 
-async function createConnection() {
-  return mysql.createConnection({
-    host: hyperdrive.host,
-    user: hyperdrive.user,
-    password: hyperdrive.password,
-    database: hyperdrive.database,
-    port: hyperdrive.port,
-    disableEval: true
-  });
+async function initDb() {
+  try {
+    // We will attempt MySQL first using the provided credentials
+    const mysqlPool = mysql.createPool({
+      host: process.env.DB_HOST || 'localhost',
+      user: process.env.DB_USER || 'u527069138_qrform',
+      password: process.env.DB_PASSWORD || 'r7M7Y^qt?0!L',
+      database: process.env.DB_NAME || 'u527069138_qrform',
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      connectTimeout: 5000 // 5 seconds timeout to fallback quickly
+    });
+
+    // Test connection
+    const connection = await mysqlPool.getConnection();
+    console.log('✅ Connected to MySQL Database.');
+    connection.release();
+    db = mysqlPool;
+    isMysql = true;
+
+    await initTablesMysql(mysqlPool);
+  } catch (error) {
+    console.warn('⚠️ Could not connect to MySQL. Falling back to local SQLite for development.', error.message);
+    
+    // Fallback to SQLite
+    db = new sqlite3.Database(path.join(__dirname, 'database.sqlite'), (err) => {
+      if (err) {
+        console.error('Error opening SQLite database', err.message);
+      } else {
+        console.log('✅ Connected to local SQLite database.');
+        initTablesSqlite(db);
+      }
+    });
+    isMysql = false;
+  }
 }
 
 async function initTablesMysql(pool) {
@@ -256,40 +286,30 @@ function initTablesSqlite(database) {
   });
 }
 
+initDb();
+
+// Generic query function to abstract SQLite and MySQL differences
 async function query(sql, params = []) {
-  if (!hyperdrive) {
-    throw new Error('Hyperdrive binding is not initialized');
-  }
-
-  if (!initialized) {
-    if (!initializing) {
-      initializing = (async () => {
-        const connection = await createConnection();
-
-        try {
-          await initTablesMysql(connection);
-          initialized = true;
-        } finally {
-          await connection.end();
-        }
-      })();
-    }
-
-    await initializing;
-  }
-
-  const connection = await createConnection();
-
-  try {
-    const [rows] = await connection.query(sql, params);
+  if (isMysql) {
+    const [rows] = await db.execute(sql, params);
     return rows;
-  } finally {
-    await connection.end();
+  } else {
+    return new Promise((resolve, reject) => {
+      // Replace ? with SQLite standard if needed, but sqlite uses ? too
+      if (sql.trim().toUpperCase().startsWith('SELECT')) {
+        db.all(sql, params, (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows);
+        });
+      } else {
+        db.run(sql, params, function (err) {
+          if (err) reject(err);
+          // For INSERT, sqlite returns this.lastID, mysql returns insertId
+          else resolve({ insertId: this.lastID, changes: this.changes });
+        });
+      }
+    });
   }
 }
 
-function setHyperdrive(binding) {
-  hyperdrive = binding;
-}
-
-module.exports = { query, setHyperdrive };
+module.exports = { query };
