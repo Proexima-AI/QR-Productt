@@ -4,6 +4,9 @@ import { ShieldCheck, Sparkles, QrCode, TrendingUp, Zap, Server, ChevronRight, S
 import fullImage from '../assets/new review image.png';
 import faqImage from '../assets/faq.png';
 import ExtendedHowItWorks from './ExtendedHowItWorks';
+import BusinessGrowth from './BusinessGrowth';
+import Testimonials from './Testimonials';
+import transparentLogo from '../assets/transparent_logo.png';
 import ourMissionImg from '../assets/our_mission.png';
 import heroBg from '../assets/hero_background.png';
 
@@ -44,24 +47,24 @@ export default function LandingPage() {
       <nav className={`fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-[1400px] z-50 transition-all duration-500 rounded-xl border ${scrolled ? 'bg-[#0A39AB]/60 backdrop-blur-md border-white/20 shadow-md' : 'bg-[#0A39AB] border-transparent shadow-lg'}`}>
         <div className="px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => scrollToSection('home')}>
-            <Star className="w-8 h-8 text-white fill-white" />
-            <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">Review<span className="text-white/80">Boost</span></span>
+            <img src={transparentLogo} alt="ReviewBoost Logo" className="h-12 md:h-14 w-auto object-contain" />
+            <span className="text-xl sm:text-2xl font-serif font-extrabold tracking-tight text-white">ReviewBoost</span>
           </div>
 
           {/* Desktop Nav Links */}
           <div className="hidden lg:flex items-center gap-8">
-            <button onClick={() => scrollToSection('home')} className="text-sm font-medium text-white hover:text-white/80 transition-colors">Home</button>
-            <button onClick={() => scrollToSection('about')} className="text-sm font-medium text-white hover:text-white/80 transition-colors">About</button>
-            <button onClick={() => scrollToSection('how-it-works')} className="text-sm font-medium text-white hover:text-white/80 transition-colors">How it Works</button>
-            <button onClick={() => scrollToSection('pricing')} className="text-sm font-medium text-white hover:text-white/80 transition-colors">Pricing</button>
-            <button onClick={() => navigate('/contact')} className="text-sm font-medium text-white hover:text-white/80 transition-colors">Contact Us</button>
+            <button onClick={() => scrollToSection('home')} className="text-base font-semibold text-white hover:text-white/80 transition-colors">Home</button>
+            <button onClick={() => scrollToSection('about')} className="text-base font-semibold text-white hover:text-white/80 transition-colors">About</button>
+            <button onClick={() => scrollToSection('how-it-works')} className="text-base font-semibold text-white hover:text-white/80 transition-colors">How it Works</button>
+            <button onClick={() => scrollToSection('pricing')} className="text-base font-semibold text-white hover:text-white/80 transition-colors">Pricing</button>
+            <button onClick={() => navigate('/contact')} className="text-base font-semibold text-white hover:text-white/80 transition-colors">Contact Us</button>
           </div>
 
           <div className="flex items-center gap-4 sm:gap-6">
-            <button onClick={() => navigate('/login')} className="hidden sm:flex text-sm font-medium text-white hover:text-white/80 transition-colors">
+            <button onClick={() => navigate('/login')} className="hidden lg:flex text-base font-semibold text-white hover:text-white/80 transition-colors">
               Login
             </button>
-            <button onClick={() => navigate('/signup')} className="text-sm font-semibold bg-white text-[#0A39AB] px-5 sm:px-6 py-2 sm:py-2.5 rounded-xl hover:bg-slate-50 transition-colors">
+            <button onClick={() => navigate('/signup')} className="hidden lg:flex text-base font-bold bg-white text-[#0A39AB] px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl hover:bg-slate-50 transition-colors items-center justify-center shadow-sm">
               Get Started
             </button>
 
@@ -83,14 +86,15 @@ export default function LandingPage() {
             <button onClick={() => scrollToSection('pricing')} className="text-left text-base font-semibold text-white hover:text-white/80">Pricing</button>
             <button onClick={() => { navigate('/contact'); setMobileMenuOpen(false); }} className="text-left text-base font-semibold text-white hover:text-white/80">Contact Us</button>
             <hr className="border-white/20" />
-            <button onClick={() => navigate('/login')} className="text-left text-base font-semibold text-white hover:text-white/80">Client Login</button>
+            <button onClick={() => { navigate('/login'); setMobileMenuOpen(false); }} className="text-left text-base font-semibold text-white hover:text-white/80">Client Login</button>
+            <button onClick={() => { navigate('/signup'); setMobileMenuOpen(false); }} className="text-center text-base font-bold text-[#0A39AB] bg-white rounded-xl py-3 px-4 hover:bg-slate-50 mt-2 w-full transition-colors shadow-sm">Get Started</button>
           </div>
         )}
       </nav>
       <main className="flex-1 flex flex-col items-center justify-start z-20 pt-0 pb-0 px-4">
 
         {/* Hero Section */}
-        <div id="home" className="w-[100vw] ml-[calc(-50vw+50%)] text-center relative mt-0 sm:mt-0 scroll-mt-32 px-4 sm:px-6 flex flex-col items-center justify-center h-[100vh] min-h-[700px]">
+        <div id="home" className="w-[100vw] ml-[calc(-50vw+50%)] text-center relative mt-0 sm:mt-0 scroll-mt-32 px-4 sm:px-6 flex flex-col items-center justify-start md:justify-center h-[100vh] min-h-[700px]">
 
           {/* Background Image */}
           <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
@@ -98,7 +102,7 @@ export default function LandingPage() {
           </div>
 
           {/* Content */}
-          <div className="relative z-10 flex flex-col items-center max-w-4xl mx-auto w-full pt-[120px] pb-10">
+          <div className="relative z-10 flex flex-col items-center max-w-4xl mx-auto w-full pt-[180px] md:pt-[120px] pb-10">
 
             <h1 className="text-4xl sm:text-5xl md:text-[4rem] font-serif font-extrabold tracking-tight mb-8 leading-[1.1] text-[#0B1A30]">
               Turn Happy Customers <br /> into <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">Google Reviews,</span><br />
@@ -200,6 +204,9 @@ export default function LandingPage() {
         <div id="how-it-works" className="scroll-mt-24 w-full">
           <ExtendedHowItWorks />
         </div>
+
+        {/* Business Growth Section */}
+        <BusinessGrowth />
 
         {/* Pricing Section */}
         <div id="pricing" className="w-[calc(100%+2rem)] lg:w-[calc(100%+10vw)] xl:w-[100vw] flex flex-col items-center mt-12 py-24" style={{ background: 'radial-gradient(ellipse 900px 500px at 50% -10%, #cfeaff, transparent), linear-gradient(180deg, #eaf6ff 0%, #f7fbff 60%, #ffffff 100%)' }}>
@@ -311,6 +318,9 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
+
+        {/* Testimonials Section */}
+        <Testimonials />
 
         {/* FAQ Section */}
         <div id="faq" className="w-full max-w-[1400px] mx-auto mt-8 mb-16 px-6 scroll-mt-24">
@@ -444,8 +454,8 @@ export default function LandingPage() {
 
           <div className="col-span-1 md:col-span-1">
             <div className="flex items-center gap-2 mb-4 cursor-pointer" onClick={() => scrollToSection('home')}>
-              <QrCode className="w-6 h-6 text-indigo-600" />
-              <span className="font-bold text-white text-lg tracking-tight">ReviewPulse<span className="text-indigo-600">AI</span></span>
+              <img src={transparentLogo} alt="ReviewBoost Logo" className="h-12 md:h-16 w-auto object-contain" />
+              <span className="font-serif font-extrabold text-white text-2xl tracking-tight">ReviewBoost</span>
             </div>
             <p className="text-sm leading-relaxed mb-6">
               The industry-standard AI engine for generating authentic Google Reviews and protecting your local reputation.
@@ -495,7 +505,7 @@ export default function LandingPage() {
         </div>
 
         <div className="max-w-7xl mx-auto px-6 border-t border-[#F5F7F1]/10 pt-8 flex flex-col md:flex-row items-center justify-between text-xs">
-          <p>&copy; 2026 ReviewPulse AI. All rights reserved.</p>
+          <p>&copy; 2026 ReviewBoost. All rights reserved.</p>
           <p className="mt-2 md:mt-0">Built for Local Business Growth.</p>
         </div>
       </footer>
