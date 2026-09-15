@@ -47,7 +47,7 @@ const authenticate = (req, res, next) => {
 // 1. Signup / Purchase (Simulating payment success)
 app.post('/api/auth/signup', async (req, res) => {
   const { email, password, businessName, ownerName, category } = req.body;
-  
+
   try {
     const existing = await query('SELECT id FROM users WHERE email = ?', [email]);
     if (existing.length > 0) {
@@ -150,15 +150,15 @@ app.post('/api/business/setup-complete', authenticate, async (req, res) => {
       WHERE user_id = ?`,
       [name, tagline, category, google_review_url, target_keywords, req.user.id]
     );
-    
+
     // 2. Activate user
     await query('UPDATE users SET status = ? WHERE id = ?', ['active', req.user.id]);
-    
+
     // Generate new token with active status
     const token = jwt.sign({ id: req.user.id, email: req.user.email, status: 'active' }, JWT_SECRET, { expiresIn: '1d' });
-    
+
     const userQuery = await query('SELECT created_at, subscription_ends_at FROM users WHERE id = ?', [req.user.id]);
-    
+
     res.json({ success: true, token, user: { id: req.user.id, email: req.user.email, status: 'active', created_at: userQuery[0].created_at, subscription_ends_at: userQuery[0].subscription_ends_at } });
   } catch (error) {
     console.error(error);
@@ -258,7 +258,7 @@ app.post('/api/payment/verify', authenticate, async (req, res) => {
       // Payment is verified
       // Calculate new subscription ends at
       const daysToAdd = plan_duration_days || 30; // default 30 if not specified
-      
+
       const userResult = await query('SELECT subscription_ends_at FROM users WHERE id = ?', [req.user.id]);
       let currentEndsAt = new Date();
       if (userResult.length > 0 && userResult[0].subscription_ends_at) {
@@ -267,20 +267,20 @@ app.post('/api/payment/verify', authenticate, async (req, res) => {
           currentEndsAt = existingEnd; // Extend from current end date
         }
       }
-      
+
       const newEndsAt = new Date(currentEndsAt.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
-      
+
       let formattedDate;
       // Depending on mysql or sqlite, format it to YYYY-MM-DD HH:MM:SS
       formattedDate = newEndsAt.toISOString().slice(0, 19).replace('T', ' ');
-      
+
       await query('UPDATE users SET subscription_ends_at = ? WHERE id = ?', [formattedDate, req.user.id]);
-      
+
       await query(
         'INSERT INTO payments (user_id, razorpay_order_id, razorpay_payment_id, amount, plan_duration_days) VALUES (?, ?, ?, ?, ?)',
         [req.user.id, razorpay_order_id, razorpay_payment_id, amount || 0, plan_duration_days]
       );
-      
+
       res.json({ success: true, subscription_ends_at: formattedDate });
     } else {
       res.status(400).json({ error: 'Invalid signature' });
@@ -322,7 +322,7 @@ app.get('/api/feedback/me', authenticate, async (req, res) => {
   try {
     const businesses = await query('SELECT id FROM businesses WHERE user_id = ?', [req.user.id]);
     if (businesses.length === 0) return res.json([]);
-    
+
     const feedback = await query('SELECT * FROM feedback WHERE business_id = ? ORDER BY id DESC', [businesses[0].id]);
     // Format chips back to array
     const formatted = feedback.map(fb => ({
@@ -401,7 +401,7 @@ app.get('/api/google/callback', async (req, res) => {
   try {
     const { tokens } = await oauth2Client.getToken(code);
     const userId = state;
-    
+
     // In a real app we'd fetch the exact Google Account ID here.
     // For now, update the business record with tokens
     await query(
@@ -438,10 +438,10 @@ async function runAutoReplyJob() {
   try {
     // 1. Find all businesses that have auto_reply enabled and have tokens
     const businesses = await query('SELECT * FROM businesses WHERE auto_reply_enabled = 1 OR auto_reply_enabled = true');
-    
+
     for (const biz of businesses) {
       // SIMULATION for demonstration purposes since we don't have real tokens
-      
+
       // 10% chance to generate a mock review every minute
       if (Math.random() < 0.1) {
         console.log(`[Simulation] Fetching reviews for business: ${biz.name}`);
@@ -454,7 +454,7 @@ async function runAutoReplyJob() {
         };
 
         const existing = await query('SELECT review_id FROM google_reviews WHERE review_id = ?', [mockReview.review_id]);
-        
+
         if (existing.length === 0) {
           // 3. Generate AI Reply
           const prompt = `
@@ -490,11 +490,11 @@ async function runAutoReplyJob() {
 app.get('/api/admin/activate/:email', async (req, res) => {
   try {
     const { email } = req.params;
-    
+
     // Set 1-year subscription for testing
     const newEndsAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
     const formattedDate = newEndsAt.toISOString().slice(0, 19).replace('T', ' ');
-    
+
     await query('UPDATE users SET subscription_ends_at = ? WHERE email = ?', [formattedDate, email]);
     res.json({ message: 'User activated for 1 year' });
   } catch (error) {
@@ -596,7 +596,7 @@ app.post('/api/chat', async (req, res) => {
     if (!sessionId) {
       return res.status(400).json({ error: 'Session ID is required' });
     }
-    
+
     // Save user message to DB
     await query('INSERT INTO chat_logs (session_id, message, role) VALUES (?, ?, ?)', [sessionId, message, 'user']);
 
@@ -650,7 +650,7 @@ app.post('/api/chat', async (req, res) => {
       const toolCall = choice.message.tool_calls[0];
       if (toolCall.function.name === "save_crm_lead") {
         const args = JSON.parse(toolCall.function.arguments);
-        
+
         // Validate mobile number to ensure it has no characters
         const mobileRegex = /^[0-9]+$/;
         if (!mobileRegex.test(args.mobile)) {
@@ -690,7 +690,7 @@ app.get('/api/admin/chats', authenticate, requireAdmin, async (req, res) => {
       acc[log.session_id].push(log);
       return acc;
     }, {});
-    
+
     // Convert to array and sort by latest activity
     const sessionsArray = Object.keys(sessions).map(id => ({
       sessionId: id,
