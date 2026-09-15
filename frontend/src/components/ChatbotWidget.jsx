@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send, Bot, User, MoreHorizontal, ArrowUp, Sparkles } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, MoreHorizontal, ArrowUp, Sparkles, MapPin, Bookmark, ArrowDown, ChevronDown, ChevronUp } from 'lucide-react';
 import { sendChatMessage } from '../services/apiService';
 
 export default function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [message, setMessage] = useState('');
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState(() => {
+    try {
+      const savedHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+      return savedHistory.filter(msg => !msg?.message?.includes("Hi there! I'm"));
+    } catch {
+      return [];
+    }
+  });
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState('');
   const messagesEndRef = useRef(null);
@@ -19,11 +26,6 @@ export default function ChatbotWidget() {
       localStorage.setItem('chatSessionId', sid);
     }
     setSessionId(sid);
-    
-    // Load initial greeting if empty
-    const savedHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]');
-    const filteredHistory = savedHistory.filter(msg => !msg.message.includes("Hi there! I'm"));
-    setHistory(filteredHistory);
   }, []);
 
   useEffect(() => {
@@ -71,6 +73,82 @@ export default function ChatbotWidget() {
     "Tips for handling negative feedback"
   ];
 
+  // Helper to parse markdown-like text and extract [CARD: {}] JSON
+  const parseMessage = (msgText) => {
+    if (!msgText) return { parts: [], card: null, chips: [] };
+    let text = msgText;
+    let card = null;
+    let chips = [];
+
+    // 1. Extract [CHIPS: item1|item2]
+    const chipsRegex = /\[CHIPS:\s*(.*?)\s*\]/is;
+    const chipsMatch = text.match(chipsRegex);
+    if (chipsMatch) {
+      chips = chipsMatch[1].split('|').map(c => c.trim()).filter(Boolean);
+      text = text.replace(chipsRegex, '');
+    }
+
+    // 2. Extract [CARD: JSON]
+    const cardRegex = /\[CARD:\s*(\{.*?\})\s*\]/is;
+    const match = text.match(cardRegex);
+    if (match) {
+      try {
+        card = JSON.parse(match[1]);
+        text = text.replace(cardRegex, ''); // Remove tag
+      } catch (e) {
+        console.error("Failed to parse card JSON", e);
+      }
+    }
+
+    // 3. Parse **bold** and newlines
+    const parts = text.split(/(\*\*.*?\*\*|\n)/g).filter(Boolean);
+    return { parts, card, chips };
+  };
+
+  const LoadingAccordion = () => {
+    const [step, setStep] = useState(0);
+    const steps = [
+      { title: "Moving ahead confidently", desc: "Gathering the best solutions for you." },
+      { title: "Mapping the destination...", desc: "I'm organizing highlights by usefulness — what to do, where to stay oriented, and what to watch for." }
+    ];
+
+    useEffect(() => {
+      const t1 = setTimeout(() => setStep(1), 1500);
+      return () => clearTimeout(t1);
+    }, []);
+
+    return (
+      <div className="flex flex-col items-start w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="flex items-center gap-1.5 mb-2 ml-1">
+          <span className="text-[#1A56DB] font-bold text-sm">Lyra</span>
+          <Sparkles className="w-3.5 h-3.5 text-[#1A56DB]" />
+        </div>
+        <div className="bg-white rounded-[1.25rem] border border-slate-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] p-4 w-full sm:w-[90%]">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-4 h-4 text-[#1A56DB] animate-pulse" />
+            <span className="font-semibold text-slate-800 text-[15px]">Working on your request...</span>
+          </div>
+          
+          <div className="space-y-2">
+            {steps.map((s, i) => (
+              <div key={i} className="border-t border-slate-50 pt-2 transition-all duration-300">
+                <div className="flex justify-between items-center text-[13.5px] font-medium text-slate-700">
+                  <span className={i === step ? "text-slate-800" : "text-slate-500"}>{s.title}</span>
+                  {i === step ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-300" />}
+                </div>
+                {i === step && (
+                  <div className="mt-2 text-[12.5px] text-slate-500 leading-relaxed animate-in slide-in-from-top-1 duration-300">
+                    {s.desc}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
       {/* Chat Window */}
@@ -116,37 +194,89 @@ export default function ChatbotWidget() {
             )}
 
             {/* Messages */}
-            {history.map((msg, idx) => (
-              <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                {msg.role === 'model' && (
-                  <div className="flex items-center gap-1.5 mb-2 ml-1">
-                    <span className="text-[#1A56DB] font-bold text-sm">Lyra</span>
-                    <Sparkles className="w-3.5 h-3.5 text-[#1A56DB]" />
+            {history.map((msg, idx) => {
+              const { parts, card, chips } = msg.role === 'model' ? parseMessage(msg.message) : { parts: [msg.message], card: null, chips: [] };
+              
+              return (
+                <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} animate-in fade-in slide-in-from-bottom-2 duration-300 w-full`}>
+                  {msg.role === 'model' && (
+                    <div className="flex items-center gap-1.5 mb-2 ml-1">
+                      <span className="text-[#1A56DB] font-bold text-sm">Lyra</span>
+                      <Sparkles className="w-3.5 h-3.5 text-[#1A56DB]" />
+                    </div>
+                  )}
+                  
+                  <div className={`max-w-[90%] sm:max-w-[85%] ${
+                    msg.role === 'user' 
+                      ? 'bg-[#F3F4F6] text-slate-800 rounded-[1.5rem] rounded-tr-sm px-5 py-3.5 text-[14.5px] leading-relaxed' 
+                      : 'bg-white text-slate-800 rounded-[1.25rem] border border-slate-100 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] p-0'
+                  }`}>
+                    {msg.role === 'user' ? (
+                      msg.message
+                    ) : (
+                      <div className="flex flex-col">
+                        <div className="px-5 py-4 text-[14.5px] leading-relaxed">
+                          {parts.map((part, i) => {
+                            if (part === '\n') return <br key={i} />;
+                            if (part.startsWith('**') && part.endsWith('**')) {
+                              return <strong key={i} className="font-bold text-slate-900">{part.slice(2, -2)}</strong>;
+                            }
+                            return <span key={i}>{part}</span>;
+                          })}
+                        </div>
+                        
+                        {card && (
+                          <div className="px-5 pb-5 pt-2 border-t border-slate-50">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-6 h-6 rounded-full bg-[#06b6d4] flex items-center justify-center shadow-sm">
+                                <MapPin className="w-3.5 h-3.5 text-white" />
+                              </div>
+                              <span className="font-bold text-[14px] text-slate-800">Business Overview</span>
+                            </div>
+                            
+                            <div className="rounded-2xl border border-slate-100 overflow-hidden shadow-sm group cursor-pointer hover:shadow-md transition-all duration-300">
+                              <div className="h-[140px] w-full bg-slate-200 relative overflow-hidden">
+                                <img src={card.image} alt={card.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                                <div className="absolute top-3 right-3 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm cursor-pointer hover:bg-white">
+                                  <Bookmark className="w-3.5 h-3.5 text-slate-700" />
+                                </div>
+                              </div>
+                              <div className="p-4 bg-slate-50/50">
+                                <h4 className="font-bold text-slate-800 text-[16px]">{card.title}</h4>
+                                <div className="flex items-center gap-1.5 mt-1 mb-3 text-slate-500 text-[13px] font-medium">
+                                  <MapPin className="w-3.5 h-3.5" />
+                                  {card.subtitle}
+                                </div>
+                                <button className="w-full py-2 bg-white rounded-xl border border-slate-200 text-[#06b6d4] font-semibold text-[13.5px] flex items-center justify-center gap-1.5 shadow-sm hover:bg-[#06b6d4] hover:text-white hover:border-[#06b6d4] transition-all">
+                                  {card.action} <ArrowDown className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                )}
-                <div className={`max-w-[85%] px-5 py-3.5 text-[14.5px] leading-relaxed ${
-                  msg.role === 'user' 
-                    ? 'bg-[#F3F4F6] text-slate-800 rounded-[1.5rem] rounded-tr-sm' 
-                    : 'bg-white text-slate-800 rounded-[1.25rem] border border-slate-100 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)]'
-                }`}>
-                  {msg.message}
-                </div>
-              </div>
-            ))}
 
-            {loading && (
-              <div className="flex flex-col items-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="flex items-center gap-1.5 mb-2 ml-1">
-                  <span className="text-[#1A56DB] font-bold text-sm">Lyra</span>
-                  <Sparkles className="w-3.5 h-3.5 text-[#1A56DB]" />
+                  {/* Contextual Suggestion Chips (Only for the latest message) */}
+                  {chips && chips.length > 0 && idx === history.length - 1 && !loading && (
+                    <div className="flex flex-wrap gap-2 mt-3 ml-1 mb-2 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-150 fill-mode-both">
+                      {chips.map((chip, i) => (
+                        <button 
+                          key={i}
+                          onClick={() => sendMessage(chip)}
+                          className="px-4 py-2 bg-white border border-[#1A56DB]/20 text-[#1A56DB] text-[13.5px] font-medium rounded-full shadow-[0_2px_8px_-2px_rgba(26,86,219,0.15)] hover:bg-[#1A56DB] hover:text-white hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 active:scale-95"
+                        >
+                          {chip}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="bg-white rounded-[1.25rem] border border-slate-100 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] px-5 py-4 flex gap-1.5 items-center h-[46px]">
-                  <div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce [animation-delay:0.2s]" />
-                  <div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce [animation-delay:0.4s]" />
-                </div>
-              </div>
-            )}
+              );
+            })}
+
+            {loading && <LoadingAccordion />}
             <div ref={messagesEndRef} />
           </div>
 
