@@ -187,14 +187,14 @@ export default function LandingPage() {
                 We help businesses get more positive reviews, manage their online reputation, and build lasting trust with their customers — because your reputation drives real growth.
               </p>
 
-              <button className="px-8 py-3.5 rounded-xl border-2 border-indigo-200 text-indigo-600 font-bold hover:bg-indigo-50 transition-colors flex items-center gap-2 text-lg shadow-sm">
+              <button onClick={() => scrollToSection('how-it-works')} className="px-8 py-3.5 rounded-xl border-2 border-indigo-200 text-indigo-600 font-bold hover:bg-indigo-50 transition-colors flex items-center gap-2 text-lg shadow-sm">
                 Learn more <ArrowRight className="w-5 h-5" />
               </button>
             </div>
 
             {/* Right Image */}
-            <div className="w-full md:w-[55%] relative">
-              <img src={ourMissionImg} alt="Our Mission" className="w-full h-auto object-contain transform md:scale-[1.3] lg:scale-[1.4] origin-center md:origin-right translate-x-8 lg:translate-x-28 drop-shadow-2xl" />
+            <div className="w-full md:w-[55%] relative flex justify-center">
+              <img src={ourMissionImg} alt="Our Mission" className="w-full max-w-sm md:max-w-none h-auto object-contain transform scale-100 md:scale-[1.3] lg:scale-[1.4] origin-center md:origin-right translate-x-0 md:translate-x-8 lg:translate-x-28 drop-shadow-2xl" />
             </div>
 
           </div>
@@ -370,7 +370,7 @@ export default function LandingPage() {
         </div>
 
         {/* Contact Section */}
-        <div id="contact" className="w-[calc(100%+2rem)] lg:w-[calc(100%+10vw)] xl:w-[100vw] flex flex-col items-center pt-16 pb-0 px-4 relative z-20 -mb-24 md:-mb-40">
+        <div id="contact" className="w-[calc(100%+2rem)] lg:w-[calc(100%+10vw)] xl:w-[100vw] flex flex-col items-center pt-16 pb-0 px-4 relative z-20 -mb-[18rem] md:-mb-40">
           <div className="w-full max-w-[1100px] mx-auto flex flex-col md:flex-row bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl overflow-hidden">
 
             {/* Left Panel */}
@@ -425,7 +425,7 @@ export default function LandingPage() {
                     <span className="text-indigo-500 font-bold text-sm w-6 tracking-wider">03</span>
                     <div className="flex flex-col gap-0.5">
                       <span className="text-slate-900 font-bold text-[1.1rem]">Office</span>
-                      <span className="text-slate-500 text-sm">Tech Coridor, Bhubaneswar, India</span>
+                      <span className="text-slate-500 text-sm">Noida, Uttar Pradesh, India</span>
                     </div>
                   </div>
                   <button className="w-10 h-10 rounded-full border border-indigo-100 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-all duration-300 shadow-sm shrink-0">
@@ -449,10 +449,10 @@ export default function LandingPage() {
       </main>
 
       {/* Expanded Footer Section */}
-      <footer className="w-full bg-gradient-to-b from-[#0B1A30] to-[#040C18] text-[#F5F7F1]/60 pt-36 md:pt-56 pb-8 border-t border-[#F5F7F1]/10 relative z-10">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+      <footer className="w-full bg-gradient-to-b from-[#0B1A30] to-[#040C18] text-[#F5F7F1]/60 pt-[22rem] md:pt-56 pb-8 border-t border-[#F5F7F1]/10 relative z-10">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-5 gap-x-6 gap-y-10 mb-12">
 
-          <div className="col-span-1 md:col-span-1">
+          <div className="col-span-2 md:col-span-2 lg:pr-12">
             <div className="flex items-center gap-2 mb-4 cursor-pointer" onClick={() => scrollToSection('home')}>
               <img src={transparentLogo} alt="ReviewBoost Logo" className="h-12 md:h-16 w-auto object-contain" />
               <span className="font-serif font-extrabold text-white text-2xl tracking-tight">ReviewBoost</span>
@@ -494,7 +494,7 @@ export default function LandingPage() {
             </ul>
           </div>
 
-          <div>
+          <div className="col-span-2 md:col-span-1">
             <h4 className="text-white font-bold mb-4">Ready to Grow?</h4>
             <p className="text-sm mb-4">Join hundreds of local businesses crushing their competition.</p>
             <button onClick={() => navigate('/signup')} className="w-full py-2.5 rounded-lg bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-500 transition-colors">

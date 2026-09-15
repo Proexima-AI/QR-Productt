@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Star, ArrowRight, MapPin, Phone } from 'lucide-react';
+import transparentLogo from '../assets/transparent_logo.png';
 
 export default function ContactUs() {
   const navigate = useNavigate();
@@ -34,8 +35,8 @@ export default function ContactUs() {
       <nav className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-[1400px] z-50 transition-all duration-300 bg-[#0A39AB] rounded-xl shadow-lg border border-transparent">
         <div className="px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-            <Star className="w-8 h-8 text-white fill-white" />
-            <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">Review<span className="text-white/80">Boost</span></span>
+            <img src={transparentLogo} alt="ReviewBoost Logo" className="h-12 md:h-14 w-auto object-contain" />
+            <span className="text-xl sm:text-2xl font-serif font-extrabold tracking-tight text-white">ReviewBoost</span>
           </div>
 
           {/* Desktop Nav Links */}
@@ -48,10 +49,10 @@ export default function ContactUs() {
           </div>
 
           <div className="flex items-center gap-4 sm:gap-6">
-            <button onClick={() => navigate('/login')} className="hidden sm:flex items-center gap-2 text-sm font-medium text-white hover:text-white/80 transition-colors">
+            <button onClick={() => navigate('/login')} className="hidden lg:flex items-center gap-2 text-sm font-medium text-white hover:text-white/80 transition-colors">
               Login
             </button>
-            <button onClick={() => navigate('/signup')} className="text-sm font-semibold bg-white text-[#0A39AB] px-5 sm:px-6 py-2 sm:py-2.5 rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
+            <button onClick={() => navigate('/signup')} className="hidden lg:flex text-sm font-semibold bg-white text-[#0A39AB] px-5 sm:px-6 py-2 sm:py-2.5 rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
               Get Started
             </button>
 
@@ -73,7 +74,8 @@ export default function ContactUs() {
             <button onClick={() => navigate('/')} className="text-left text-base font-semibold text-white hover:text-white/80">Pricing</button>
             <button onClick={() => { navigate('/contact'); setMobileMenuOpen(false); }} className="text-left text-base font-semibold text-white hover:text-white/80">Contact Us</button>
             <hr className="border-white/20" />
-            <button onClick={() => navigate('/login')} className="text-left text-base font-semibold text-white hover:text-white/80">Login</button>
+            <button onClick={() => { navigate('/login'); setMobileMenuOpen(false); }} className="text-left text-base font-semibold text-white hover:text-white/80">Client Login</button>
+            <button onClick={() => { navigate('/signup'); setMobileMenuOpen(false); }} className="text-center text-base font-bold text-[#0A39AB] bg-white rounded-xl py-3 px-4 hover:bg-slate-50 mt-2 w-full transition-colors shadow-sm">Get Started</button>
           </div>
         )}
       </nav>
@@ -113,7 +115,7 @@ export default function ContactUs() {
                 </div>
                 <div>
                   <h4 className="text-[#0B1A30] font-semibold mb-1">Call Us</h4>
-                  <a href="tel:+919876543210" className="text-slate-500 hover:text-blue-600 transition-colors">+91 98765 43210</a>
+                  <a href="tel:+917008021376" className="text-slate-500 hover:text-blue-600 transition-colors">+91 7008021376</a>
                 </div>
               </div>
 
@@ -123,7 +125,7 @@ export default function ContactUs() {
                 </div>
                 <div>
                   <h4 className="text-[#0B1A30] font-semibold mb-1">Location</h4>
-                  <p className="text-slate-500">Bangalore, India</p>
+                  <p className="text-slate-500">Noida, Uttar Pradesh, India</p>
                 </div>
               </div>
             </div>
