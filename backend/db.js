@@ -122,6 +122,16 @@ async function initTablesMysql(pool) {
     );
   `;
 
+  const chatLogsQuery = `
+  CREATE TABLE IF NOT EXISTS chat_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    session_id VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+`;
+
   await pool.query(usersQuery);
   try {
     await pool.query("ALTER TABLE users ADD COLUMN subscription_ends_at TIMESTAMP NULL");
@@ -135,6 +145,8 @@ async function initTablesMysql(pool) {
   await pool.query(paymentsQuery);
   await pool.query(supportTicketsQuery);
   await pool.query(crmLeadsQuery);
+  await pool.query(chatLogsQuery);
+  
   console.log('✅ MySQL tables initialized.');
 }
 
