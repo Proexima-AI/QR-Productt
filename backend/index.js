@@ -7,7 +7,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
-const { query } = require('./db.local');
+const { query } = require('./db');
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID || 'YOUR_CLIENT_ID',
@@ -705,11 +705,11 @@ app.get('/api/admin/chats', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 5001;
-// START SERVER
-app.listen(PORT, () => {
-  console.log(`🚀 Backend running on http://localhost:${PORT}`);
-});
+// const PORT = process.env.PORT || 5001;
+// // START SERVER
+// app.listen(PORT, () => {
+//   console.log(`🚀 Backend running on http://localhost:${PORT}`);
+// });
 
 app.runAutoReplyJob = runAutoReplyJob;
 module.exports = app;

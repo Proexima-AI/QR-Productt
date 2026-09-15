@@ -25,18 +25,18 @@ export default function PaymentGateway({ onPaymentSuccess }) {
     {
       id: '6months',
       name: '6 Months Plan',
-      price: 299 * 6,
+      price: 249 * 6,
       durationDays: 180 + 15,
-      discount: 100,
+      discount: 0,
       extraDaysText: '+ 15 Extra Days Free!',
     },
     {
       id: 'yearly',
       name: '1 Year Plan',
-      price: 299 * 12,
-      durationDays: 365 + 40,
-      discount: 100,
-      extraDaysText: '+ 40 Extra Days Free!',
+      price: 199 * 12,
+      durationDays: 365 + 45,
+      discount: 0,
+      extraDaysText: '+ 45 Extra Days Free!',
     }
   ];
 
