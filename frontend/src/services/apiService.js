@@ -89,6 +89,16 @@ export const sendChatMessage = async (data) => {
   return res.data;
 };
 
+export const getProductSuggestions = async (category) => {
+  const res = await axios.post(`${API_URL}/business/suggest-products`, { category }, getAuthHeaders());
+  return res.data.suggestions;
+};
+
+export const analyzeBusiness = async (businessName, category, location) => {
+  const res = await axios.post(`${API_URL}/business/analyze`, { businessName, category, location }, getAuthHeaders());
+  return res.data.analysis;
+};
+
 // ========================
 // Google Integration Services
 // ========================

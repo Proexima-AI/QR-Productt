@@ -49,6 +49,10 @@ async function initTablesMysql(pool) {
       google_refresh_token TEXT,
       google_account_id VARCHAR(255),
       auto_reply_enabled BOOLEAN DEFAULT FALSE,
+      mobile_number VARCHAR(255),
+      top_selling_items TEXT,
+      business_location VARCHAR(1024),
+      ai_analysis_results TEXT,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
   `;
@@ -139,6 +143,10 @@ async function initTablesMysql(pool) {
   try {
     await pool.query("ALTER TABLE users ADD COLUMN role ENUM('user', 'admin') DEFAULT 'user'");
   } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN mobile_number VARCHAR(255)"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN top_selling_items TEXT"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN business_location VARCHAR(1024)"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN ai_analysis_results TEXT"); } catch (err) {}
   await pool.query(businessQuery);
   await pool.query(googleReviewsQuery);
   await pool.query(feedbackQuery);
@@ -170,6 +178,10 @@ function initTablesSqlite(database) {
     database.run(`ALTER TABLE businesses ADD COLUMN auto_reply_enabled INTEGER DEFAULT 0`, (err) => {
       // Ignore error if column already exists
     });
+    database.run(`ALTER TABLE businesses ADD COLUMN mobile_number TEXT`, (err) => {});
+    database.run(`ALTER TABLE businesses ADD COLUMN top_selling_items TEXT`, (err) => {});
+    database.run(`ALTER TABLE businesses ADD COLUMN business_location TEXT`, (err) => {});
+    database.run(`ALTER TABLE businesses ADD COLUMN ai_analysis_results TEXT`, (err) => {});
 
     database.run(`
       CREATE TABLE IF NOT EXISTS businesses (
@@ -192,6 +204,10 @@ function initTablesSqlite(database) {
         google_refresh_token TEXT,
         google_account_id TEXT,
         auto_reply_enabled INTEGER DEFAULT 0,
+        mobile_number TEXT,
+        top_selling_items TEXT,
+        business_location TEXT,
+        ai_analysis_results TEXT,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
