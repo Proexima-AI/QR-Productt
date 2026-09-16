@@ -1,6 +1,6 @@
 require('dotenv').config({ override: true });
 const express = require('express');
-const { GoogleGenAI } = require('@google/genai');
+const OpenAI = require('openai');
 const { google } = require('googleapis');
 // const cron = require('node-cron');
 const cors = require('cors');
@@ -142,14 +142,14 @@ app.put('/api/business/me', authenticate, async (req, res) => {
 
 // Complete Setup and Activate User
 app.post('/api/business/setup-complete', authenticate, async (req, res) => {
-  const { name, tagline, category, google_review_url, target_keywords } = req.body;
+  const { name, tagline, category, google_review_url, target_keywords, mobile_number, top_selling_items, business_location, ai_analysis_results } = req.body;
   try {
     // 1. Update business
     await query(
       `UPDATE businesses SET 
-        name = ?, tagline = ?, category = ?, google_review_url = ?, target_keywords = ?
+        name = ?, tagline = ?, category = ?, google_review_url = ?, target_keywords = ?, mobile_number = ?, top_selling_items = ?, business_location = ?, ai_analysis_results = ?
       WHERE user_id = ?`,
-      [name, tagline, category, google_review_url, target_keywords, req.user.id]
+      [name, tagline, category, google_review_url, target_keywords, mobile_number, JSON.stringify(top_selling_items || []), business_location, JSON.stringify(ai_analysis_results || {}), req.user.id]
     );
 
     // 2. Activate user
@@ -352,7 +352,7 @@ app.put('/api/feedback/:id/resolve', authenticate, async (req, res) => {
 // ========================
 // AI REVIEW ROUTES
 // ========================
-const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY || 'dummy_key' });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 app.post('/api/generate-review', async (req, res) => {
   const { businessName, category, rating, topics, instructions } = req.body;
@@ -370,16 +370,107 @@ app.post('/api/generate-review', async (req, res) => {
       Do not include quotes or surrounding conversational text. Just the review itself.
     `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }]
     });
 
-    res.json({ review: response.text });
+    res.json({ review: response.choices[0].message.content });
   } catch (error) {
     console.error('AI Generation Error:', error);
     // Fallback if AI fails (e.g. rate limit)
     res.json({ review: `I had a fantastic experience at ${businessName}! Highly recommended for anyone looking for a great ${category}.` });
+  }
+});
+
+app.post('/api/business/suggest-products', async (req, res) => {
+  const { category } = req.body;
+  try {
+    const prompt = `You are a business consultant specializing in the Indian market. Suggest 5 to 10 top-selling or highly popular products/items for a business in the "${category}" category. The suggestions MUST be highly relevant to the Indian business market and local consumers.
+Return ONLY a valid JSON array of strings (e.g. ["Item 1", "Item 2"]). No markdown, no conversational text.`;
+    
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }]
+    });
+    
+    let text = response.choices[0].message.content.trim();
+    if (text.startsWith('```json')) text = text.replace('```json', '');
+    if (text.startsWith('```')) text = text.replace('```', '');
+    if (text.endsWith('```')) text = text.slice(0, -3);
+    
+    res.json({ suggestions: JSON.parse(text) });
+  } catch (error) {
+    console.error('Suggest Products Error:', error);
+    res.json({ suggestions: [] });
+  }
+});
+
+app.post('/api/business/analyze', async (req, res) => {
+  const { businessName, category, location } = req.body;
+  try {
+    const prompt = `You are an expert business growth analyst specializing in the Indian market. Analyze a business named "${businessName}" in the "${category}" category located in/around "${location || 'their local area'}". The analysis MUST be tailored specifically for Indian consumers and local search trends.
+Provide a JSON object with the following keys:
+- "topSearchItems": An array of 3-5 things people in India are likely searching for when they need this business.
+- "trendingKeywords": An array of 3-5 trending SEO keywords in India for this business.
+- "dos": An array of 3 things they SHOULD do to grow their online presence locally.
+- "donts": An array of 3 things they SHOULD NOT do.
+- "currentProfileAnalysis": A 1-2 sentence genuine-sounding analysis of their current digital visibility.
+- "improvementStrategy": A 1-2 sentence explanation of how deploying our smart QR code review system will drastically improve their local SEO.
+- "seoFeedbackStrategy": A 1-2 sentence explanation of how our system guides customers to include specific SEO keywords in their Google reviews.
+- "scores": An object containing the following keys (all integer values between 1 and 100):
+  - "currentSeoScore": Realistic low score (e.g., 30-50).
+  - "projectedSeoScore": High score after our system (e.g., 85-98).
+  - "localVisibility": Realistic low/mid score (e.g., 40-60).
+  - "reputationTrust": Realistic score based on average reviews (e.g., 45-65).
+
+Return ONLY valid JSON. No markdown formatting or extra text.`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    let text = response.choices[0].message.content.trim();
+    if (text.startsWith('```json')) text = text.replace('```json', '');
+    if (text.startsWith('```')) text = text.replace('```', '');
+    if (text.endsWith('```')) text = text.slice(0, -3);
+
+    res.json({ analysis: JSON.parse(text) });
+  } catch (error) {
+    console.error('Analyze Business Error:', error);
+    res.status(500).json({ error: 'Failed to analyze business' });
+  }
+});
+
+app.post('/api/business/search-places', async (req, res) => {
+  const { location, category, businessName } = req.body;
+  if (!location || location.length < 3) return res.json([]);
+  
+  try {
+    const prompt = `You are a local search engine. The user is searching for a business named "${businessName || 'Business'}" in the category "${category || 'Store'}" near "${location}".
+Return a JSON array of 3 to 4 realistic (but fictional or real) business locations in that specific area that match the query. Each object should have:
+- "name": The name of the business (use the provided name if possible, or similar competitors)
+- "address": A realistic street address in or around ${location}
+- "rating": A random decimal rating between 3.5 and 5.0
+- "reviewsCount": A random integer between 10 and 500
+
+Return ONLY the JSON array. No markdown, no extra text.`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    let text = response.choices[0].message.content.trim();
+    if (text.startsWith('```json')) text = text.replace('```json', '');
+    if (text.startsWith('```')) text = text.replace('```', '');
+    if (text.endsWith('```')) text = text.slice(0, -3);
+
+    res.json(JSON.parse(text));
+  } catch (error) {
+    console.error('Search Places Error:', error);
+    res.json([]);
   }
 });
 
@@ -464,12 +555,12 @@ async function runAutoReplyJob() {
             Write a short, professional, and appreciative reply. Do not include placeholders or signature, just the message.
           `;
 
-          const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
+          const response = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [{ role: 'user', content: prompt }]
           });
 
-          const replyText = response.text;
+          const replyText = response.choices[0].message.content;
 
           // 4. Save to database
           await query(
@@ -588,8 +679,6 @@ app.post('/api/admin/tickets/:id/reply', authenticate, requireAdmin, async (req,
 // CHATBOT ROUTES
 // ========================
 
-const { OpenAI } = require('openai');
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || 'dummy_key' });
 
 app.post('/api/chat', async (req, res) => {
   const { sessionId, message, history } = req.body;
