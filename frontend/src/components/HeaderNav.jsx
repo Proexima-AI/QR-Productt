@@ -2,7 +2,7 @@ import React from 'react';
 import { QrCode, LayoutDashboard, Printer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-export default function HeaderNav({ activeView, setActiveView }) {
+export default function HeaderNav({ activeView, setActiveView, onUpgrade }) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -72,8 +72,16 @@ export default function HeaderNav({ activeView, setActiveView }) {
         {/* Status & Logout */}
         <div className="hidden lg:flex items-center gap-4">
           {!hasActiveSubscription && trialDaysLeft !== null && trialDaysLeft > 0 && (
-            <div className="text-[11px] font-bold px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700">
-              {trialDaysLeft} Days Trial Left
+            <div className="flex items-center gap-2">
+              <div className="text-[11px] font-bold px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700">
+                {trialDaysLeft} Days Trial Left
+              </div>
+              <button 
+                onClick={onUpgrade}
+                className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm"
+              >
+                Upgrade to Pro
+              </button>
             </div>
           )}
           {hasActiveSubscription && (

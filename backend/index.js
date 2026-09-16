@@ -797,9 +797,12 @@ app.get('/api/admin/chats', authenticate, requireAdmin, async (req, res) => {
 
 // const PORT = process.env.PORT || 5001;
 // // START SERVER
-// app.listen(PORT, () => {
-//   console.log(`🚀 Backend running on http://localhost:${PORT}`);
-// });
+// if (require.main === module) {
+//   app.listen(PORT, () => {
+//     console.log(`🚀 Backend running on http://localhost:${PORT}`);
+//   });
+//   setInterval(() => {}, 1000 * 60 * 60); // Keep alive
+// }
 
 app.runAutoReplyJob = runAutoReplyJob;
 module.exports = app;

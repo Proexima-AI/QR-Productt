@@ -489,7 +489,7 @@ export default function LandingPage() {
             <ul className="space-y-2 text-sm">
               <li><button onClick={() => scrollToSection('about')} className="hover:text-white transition-colors">About Us</button></li>
               <li><button onClick={() => navigate('/contact')} className="hover:text-white transition-colors">Contact</button></li>
-              <li><button className="hover:text-white transition-colors">Privacy Policy</button></li>
+              <li><button onClick={() => navigate('/privacy')} className="hover:text-white transition-colors">Privacy Policy</button></li>
               <li><button className="hover:text-white transition-colors">Terms of Service</button></li>
             </ul>
           </div>
