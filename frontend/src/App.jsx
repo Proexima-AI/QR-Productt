@@ -60,12 +60,19 @@ function ProtectedDashboard() {
     const now = new Date();
     const hasActiveSubscription = subscriptionEndsAt && new Date(subscriptionEndsAt) > now;
     
-    if (!hasActiveSubscription && userEmail !== 'test@proexima.com') {
+    let isTrialActive = false;
+    if (createdAt) {
+      const createdDate = new Date(createdAt);
+      const trialEndDate = new Date(createdDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+      isTrialActive = now < trialEndDate;
+    }
+
+    if (!hasActiveSubscription && !isTrialActive && userEmail !== 'test@proexima.com') {
       setShowPayment(true);
     } else {
       setShowPayment(false);
     }
-  }, [subscriptionEndsAt, userEmail]);
+  }, [subscriptionEndsAt, userEmail, createdAt]);
 
   const handlePaymentSuccess = (newEndDate) => {
     localStorage.setItem('subscriptionEndsAt', newEndDate);
@@ -86,7 +93,7 @@ function ProtectedDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-indigo-100 selection:text-indigo-900">
-      <HeaderNav activeView={activeView} setActiveView={setActiveView} />
+      <HeaderNav activeView={activeView} setActiveView={setActiveView} onUpgrade={() => setShowPayment(true)} />
       
       <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         {activeView === 'dashboard' && (
