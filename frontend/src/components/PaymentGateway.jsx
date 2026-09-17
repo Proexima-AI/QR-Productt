@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ShieldCheck, Check, Zap } from 'lucide-react';
 import { createRazorpayOrder, verifyRazorpayPayment } from '../services/apiService';
 
-export default function PaymentGateway({ onPaymentSuccess }) {
+export default function PaymentGateway({ onPaymentSuccess, trialDaysLeft = 0, isTrialActive = false, onCancel = null }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [promoCode, setPromoCode] = useState('');
@@ -26,17 +26,17 @@ export default function PaymentGateway({ onPaymentSuccess }) {
       id: '6months',
       name: '6 Months Plan',
       price: 249 * 6,
-      durationDays: 180 + 15,
+      durationDays: 180 + 15 + trialDaysLeft,
       discount: 0,
-      extraDaysText: '+ 15 Extra Days Free!',
+      extraDaysText: `+ 15 Extra Days Free!${trialDaysLeft > 0 ? ` + ${trialDaysLeft} Trial Days Carried Over` : ''}`,
     },
     {
       id: 'yearly',
       name: '1 Year Plan',
       price: 199 * 12,
-      durationDays: 365 + 45,
+      durationDays: 365 + 45 + trialDaysLeft,
       discount: 0,
-      extraDaysText: '+ 45 Extra Days Free!',
+      extraDaysText: `+ 45 Extra Days Free!${trialDaysLeft > 0 ? ` + ${trialDaysLeft} Trial Days Carried Over` : ''}`,
     }
   ];
 
@@ -123,7 +123,15 @@ export default function PaymentGateway({ onPaymentSuccess }) {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="max-w-5xl w-full">
-        <div className="text-center mb-10">
+        <div className="text-center mb-10 relative">
+          {onCancel && (
+            <button 
+              onClick={onCancel}
+              className="absolute left-0 top-0 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors bg-white border border-slate-200 px-4 py-2 rounded-lg shadow-sm"
+            >
+              &larr; Back to Dashboard
+            </button>
+          )}
           <ShieldCheck className="mx-auto h-12 w-12 text-indigo-600 mb-4" />
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Complete Your Subscription</h1>
           <p className="text-slate-600 max-w-xl mx-auto">

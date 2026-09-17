@@ -56,18 +56,29 @@ function ProtectedDashboard() {
     }
   }, [navigate, status]);
 
+  const [trialDaysLeft, setTrialDaysLeft] = useState(0);
+  const [isTrialActive, setIsTrialActive] = useState(false);
+
   useEffect(() => {
     const now = new Date();
     const hasActiveSubscription = subscriptionEndsAt && new Date(subscriptionEndsAt) > now;
     
-    let isTrialActive = false;
+    let trialActive = false;
+    let daysLeft = 0;
     if (createdAt) {
       const createdDate = new Date(createdAt);
       const trialEndDate = new Date(createdDate.getTime() + 7 * 24 * 60 * 60 * 1000);
-      isTrialActive = now < trialEndDate;
+      trialActive = now < trialEndDate;
+      if (trialActive) {
+        const msLeft = trialEndDate.getTime() - now.getTime();
+        daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+      }
     }
+    
+    setIsTrialActive(trialActive);
+    setTrialDaysLeft(daysLeft);
 
-    if (!hasActiveSubscription && !isTrialActive && userEmail !== 'test@proexima.com') {
+    if (!hasActiveSubscription && !trialActive && userEmail !== 'test@proexima.com') {
       setShowPayment(true);
     } else {
       setShowPayment(false);
@@ -82,7 +93,12 @@ function ProtectedDashboard() {
   if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-indigo-600">Loading...</div>;
 
   if (showPayment) {
-    return <PaymentGateway onPaymentSuccess={handlePaymentSuccess} />;
+    return <PaymentGateway 
+      onPaymentSuccess={handlePaymentSuccess} 
+      trialDaysLeft={trialDaysLeft}
+      isTrialActive={isTrialActive}
+      onCancel={isTrialActive ? () => setShowPayment(false) : null}
+    />;
   }
 
   if (status === 'pending_setup') {
@@ -109,6 +125,7 @@ function ProtectedDashboard() {
               await resolveFeedback(id);
               setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, status: 'Resolved' } : f));
             }}
+            onUpgrade={() => setShowPayment(true)}
           />
         )}
         {activeView === 'qr' && (
