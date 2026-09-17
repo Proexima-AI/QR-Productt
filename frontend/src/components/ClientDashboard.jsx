@@ -3,7 +3,7 @@ import { Building, Key, Star, BarChart3, MessageSquare, ExternalLink, Settings, 
 import { BUSINESS_CATEGORIES } from './BusinessPresets';
 import { getGoogleAuthUrl } from '../services/apiService';
 
-export default function ClientDashboard({ business, onUpdateBusiness, internalFeedback, googleReviews = [], onResolveFeedback }) {
+export default function ClientDashboard({ business, onUpdateBusiness, internalFeedback, googleReviews = [], onResolveFeedback, onUpgrade }) {
   const [activeTab, setActiveTab] = useState('analytics');
   const [formData, setFormData] = useState({ ...business });
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -516,7 +516,7 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
             
             <button 
               className="px-6 py-3 bg-white text-slate-900 border border-slate-200 font-bold rounded-xl text-sm shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all shrink-0"
-              onClick={() => alert("To change your plan, please contact support or wait until your current period ends.")}
+              onClick={hasActiveSubscription ? () => alert("Manage plan is not implemented yet.") : onUpgrade}
             >
               {hasActiveSubscription ? 'Manage Plan' : 'Upgrade Now'}
             </button>
