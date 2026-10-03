@@ -89,8 +89,8 @@ export const sendChatMessage = async (data) => {
   return res.data;
 };
 
-export const getProductSuggestions = async (category) => {
-  const res = await axios.post(`${API_URL}/business/suggest-products`, { category }, getAuthHeaders());
+export const getProductSuggestions = async (category, state, city, query) => {
+  const res = await axios.post(`${API_URL}/business/suggest-products`, { category, state, city, query }, getAuthHeaders());
   return res.data.suggestions;
 };
 

@@ -53,6 +53,7 @@ async function initTablesMysql(pool) {
       top_selling_items TEXT,
       business_location VARCHAR(1024),
       ai_analysis_results TEXT,
+      language VARCHAR(50) DEFAULT 'en',
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
   `;
@@ -137,6 +138,7 @@ async function initTablesMysql(pool) {
   try { await pool.query("ALTER TABLE businesses ADD COLUMN top_selling_items TEXT"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN business_location VARCHAR(1024)"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN ai_analysis_results TEXT"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN language VARCHAR(50) DEFAULT 'en'"); } catch (err) {}
   await pool.query(businessQuery);
   await pool.query(googleReviewsQuery);
   await pool.query(feedbackQuery);
@@ -170,6 +172,7 @@ function initTablesSqlite(database) {
     database.run(`ALTER TABLE businesses ADD COLUMN top_selling_items TEXT`, (err) => {});
     database.run(`ALTER TABLE businesses ADD COLUMN business_location TEXT`, (err) => {});
     database.run(`ALTER TABLE businesses ADD COLUMN ai_analysis_results TEXT`, (err) => {});
+    database.run(`ALTER TABLE businesses ADD COLUMN language TEXT DEFAULT 'en'`, (err) => {});
 
     database.run(`
       CREATE TABLE IF NOT EXISTS businesses (
@@ -196,6 +199,7 @@ function initTablesSqlite(database) {
         top_selling_items TEXT,
         business_location TEXT,
         ai_analysis_results TEXT,
+        language TEXT DEFAULT 'en',
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);

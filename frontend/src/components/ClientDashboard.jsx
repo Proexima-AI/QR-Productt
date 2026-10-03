@@ -5,7 +5,15 @@ import { getGoogleAuthUrl } from '../services/apiService';
 
 export default function ClientDashboard({ business, onUpdateBusiness, internalFeedback, googleReviews = [], onResolveFeedback, onUpgrade }) {
   const [activeTab, setActiveTab] = useState('analytics');
-  const [formData, setFormData] = useState({ ...business });
+  
+  const isCustomCategory = business.category && !BUSINESS_CATEGORIES.find(c => c.id === business.category);
+  const [formData, setFormData] = useState({ 
+    ...business, 
+    category: isCustomCategory ? 'others' : (business.category || 'restaurant')
+  });
+  const [customCategory, setCustomCategory] = useState(isCustomCategory ? business.category : '');
+  const [customCategoryError, setCustomCategoryError] = useState(false);
+  
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [filterRating, setFilterRating] = useState('all');
 
@@ -32,7 +40,15 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
 
   const handleSaveSettings = (e) => {
     e.preventDefault();
-    onUpdateBusiness(formData);
+    if (formData.category === 'others' && !customCategory.trim()) {
+      setCustomCategoryError(true);
+      return;
+    }
+    const dataToUpdate = { ...formData };
+    if (dataToUpdate.category === 'others') {
+      dataToUpdate.category = customCategory.trim();
+    }
+    onUpdateBusiness(dataToUpdate);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };
@@ -424,6 +440,22 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
               </select>
             </div>
 
+            {formData.category === 'others' && (
+              <div>
+                <label className="block text-slate-700 font-bold mb-2">What kind of business? *</label>
+                <input
+                  type="text"
+                  value={customCategory}
+                  onChange={(e) => {
+                    setCustomCategory(e.target.value);
+                    setCustomCategoryError(false);
+                  }}
+                  className={`w-full bg-slate-50 border ${customCategoryError ? 'border-rose-500' : 'border-slate-200'} rounded-xl p-3 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-sm`}
+                  placeholder="e.g. Software Agency"
+                />
+              </div>
+            )}
+
             <div>
               <label className="block text-slate-700 font-bold mb-2">Owner Name</label>
               <input
@@ -432,6 +464,24 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
                 onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-sm"
               />
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-2">Review Language (for AI suggestions)</label>
+              <select
+                value={formData.language || 'en'}
+                onChange={(e) => setFormData({ ...formData, language: e.target.value })}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-sm"
+              >
+                <option value="en">English</option>
+                <option value="hi">Hindi (Romanized)</option>
+                <option value="or">Odia (Romanized)</option>
+                <option value="bn">Bengali (Romanized)</option>
+                <option value="te">Telugu (Romanized)</option>
+                <option value="ta">Tamil (Romanized)</option>
+                <option value="mr">Marathi (Romanized)</option>
+                <option value="gu">Gujarati (Romanized)</option>
+              </select>
             </div>
 
             {/* Section 2: Integrations & AI */}
