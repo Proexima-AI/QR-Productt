@@ -2,7 +2,7 @@ require('dotenv').config({ override: true });
 const express = require('express');
 const OpenAI = require('openai');
 const { google } = require('googleapis');
-const cron = require('node-cron');
+// node-cron is lazy-loaded in the local server block below (it uses __filename, which breaks Cloudflare Workers)
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -944,6 +944,7 @@ if (require.main === module) {
   });
 
   // Automated Job: Refresh SEO Keywords every 10 days for active businesses
+  const cron = require('node-cron');
   cron.schedule('0 2 * * *', async () => {
     console.log('[Cron] Running Automated SEO Analysis...');
     try {
