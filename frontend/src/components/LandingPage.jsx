@@ -392,12 +392,12 @@ export default function LandingPage() {
               <div className="flex flex-col w-full">
 
                 {/* Row 1 */}
-                <div onClick={() => window.location.href = 'mailto:info@proeximaai.com'} className="group flex items-center justify-between py-4 border-b border-slate-100 hover:border-indigo-100 transition-colors cursor-pointer">
+                <div onClick={() => window.location.href = 'mailto:info@jeriva.si'} className="group flex items-center justify-between py-4 border-b border-slate-100 hover:border-indigo-100 transition-colors cursor-pointer">
                   <div className="flex items-center gap-8">
                     <span className="text-indigo-500 font-bold text-sm w-6 tracking-wider">01</span>
                     <div className="flex flex-col gap-0.5">
                       <span className="text-slate-900 font-bold text-[1.1rem]">Email Us</span>
-                      <span className="text-slate-500 text-sm">info@proeximaai.com</span>
+                      <span className="text-slate-500 text-sm">info@jeriva.si</span>
                     </div>
                   </div>
                   <button className="w-10 h-10 rounded-full border border-indigo-100 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-all duration-300 shadow-sm shrink-0">
