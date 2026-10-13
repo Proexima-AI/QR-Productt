@@ -411,7 +411,7 @@ export default function LandingPage() {
                     <span className="text-indigo-500 font-bold text-sm w-6 tracking-wider">02</span>
                     <div className="flex flex-col gap-0.5">
                       <span className="text-slate-900 font-bold text-[1.1rem]">Call Us</span>
-                      <span className="text-slate-500 text-sm">+91 7008021376</span>
+                      <span className="text-slate-500 text-sm">+91 9437113591</span>
                     </div>
                   </div>
                   <button className="w-10 h-10 rounded-full border border-indigo-100 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-all duration-300 shadow-sm shrink-0">
