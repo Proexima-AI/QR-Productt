@@ -54,6 +54,8 @@ async function initTablesMysql(pool) {
       business_location VARCHAR(1024),
       ai_analysis_results TEXT,
       language VARCHAR(50) DEFAULT 'en',
+      business_details TEXT,
+      seo_last_updated TIMESTAMP NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
   `;
@@ -127,6 +129,16 @@ async function initTablesMysql(pool) {
     );
   `;
 
+  const chatLogsQuery = `
+  CREATE TABLE IF NOT EXISTS chat_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    session_id VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+`;
+
   await pool.query(usersQuery);
   try {
     await pool.query("ALTER TABLE users ADD COLUMN subscription_ends_at TIMESTAMP NULL");
@@ -139,12 +151,16 @@ async function initTablesMysql(pool) {
   try { await pool.query("ALTER TABLE businesses ADD COLUMN business_location VARCHAR(1024)"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN ai_analysis_results TEXT"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN language VARCHAR(50) DEFAULT 'en'"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN business_details TEXT"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN seo_last_updated TIMESTAMP NULL"); } catch (err) {}
   await pool.query(businessQuery);
   await pool.query(googleReviewsQuery);
   await pool.query(feedbackQuery);
   await pool.query(paymentsQuery);
   await pool.query(supportTicketsQuery);
   await pool.query(crmLeadsQuery);
+  await pool.query(chatLogsQuery);
+  
   console.log('✅ MySQL tables initialized.');
 }
 
