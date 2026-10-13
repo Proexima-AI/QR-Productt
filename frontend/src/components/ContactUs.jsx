@@ -115,7 +115,7 @@ export default function ContactUs() {
                 </div>
                 <div>
                   <h4 className="text-[#0B1A30] font-semibold mb-1">Call Us</h4>
-                  <a href="tel:+917008021376" className="text-slate-500 hover:text-blue-600 transition-colors">+91 9437113591</a>
+                  <a href="tel:+919437113591" className="text-slate-500 hover:text-blue-600 transition-colors">+91 9437113591</a>
                 </div>
               </div>
 
