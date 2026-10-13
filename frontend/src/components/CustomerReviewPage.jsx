@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Sparkles, Copy, ExternalLink, Send, ShieldCheck, CheckCircle2, MessageSquareHeart, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Star, Sparkles, Copy, ExternalLink, Send, ShieldCheck, CheckCircle2, MessageSquareHeart, RefreshCw, AlertTriangle, QrCode } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { generateReviewBackend } from '../services/apiService';
+import { QRCodeSVG } from 'qrcode.react';
+import { generateReviewBackend, recordScan, recordGoogleReview } from '../services/apiService';
 import { BUSINESS_CATEGORIES } from './BusinessPresets';
 
 export default function CustomerReviewPage({ business, onAddInternalFeedback }) {
@@ -15,6 +16,7 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
   const [customerName, setCustomerName] = useState('');
   const [customerContact, setCustomerContact] = useState('');
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
 
   // Find category details
   const categoryObj = BUSINESS_CATEGORIES.find(c => c.id === business.category) || BUSINESS_CATEGORIES.find(c => c.id === 'others') || BUSINESS_CATEGORIES[0];
@@ -38,7 +40,7 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
         category: business.category,
         rating,
         topics: selectedChips,
-        instructions: tone + ' tone. Keywords: ' + (business.targetKeywords || ''),
+        instructions: tone + ' tone. Keywords: ' + (business.target_keywords || ''),
         language: business.language
       });
       setReviewText(result);
@@ -52,6 +54,13 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
   useEffect(() => {
     handleGenerate();
   }, [rating, selectedChips, tone]);
+
+  // Record scan on mount
+  useEffect(() => {
+    if (business?.id) {
+      recordScan(business.id).catch(console.error);
+    }
+  }, [business?.id]);
 
   // Handle Copy & Redirect to Google Review page
   const handleCopyAndGoToGoogle = () => {
@@ -71,9 +80,26 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
     // Reset copied toast state after 3s
     setTimeout(() => setCopied(false), 4000);
 
-    // Open direct Google Review Link
     setTimeout(() => {
-      window.open(business.googleReviewUrl || `https://search.google.com/local/writereview?placeid=${business.googlePlaceId}`, '_blank');
+      let finalUrl = business.google_review_url;
+      if (finalUrl && finalUrl.startsWith('ChIJ')) {
+        finalUrl = `https://search.google.com/local/writereview?placeid=${finalUrl}`;
+      } else if (!finalUrl) {
+        finalUrl = `https://search.google.com/local/writereview?placeid=${business.google_place_id}`;
+      }
+      window.open(finalUrl, '_blank');
+
+      // Record Google Review click in backend
+      if (business?.id) {
+        recordGoogleReview(business.id).catch(console.error);
+      }
+
+      // Trigger UPI Payment Screen if configured
+      if (business.upi_id) {
+        setTimeout(() => {
+          setShowPayment(true);
+        }, 800);
+      }
     }, 600);
   };
 
@@ -97,6 +123,61 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
     setFeedbackSubmitted(true);
   };
 
+  if (showPayment) {
+    const upiUrl = `upi://pay?pa=${encodeURIComponent(business.upi_id)}&pn=${encodeURIComponent(business.name)}&cu=INR`;
+    return (
+      <div className="min-h-screen bg-slate-950 p-4 sm:p-6 md:p-8 flex items-center justify-center font-sans text-slate-100 relative overflow-x-hidden">
+        {/* Background Decorative Ambient Glows */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-lg h-72 bg-gradient-to-b from-emerald-500/20 via-indigo-600/10 to-transparent blur-3xl pointer-events-none -z-10" />
+        
+        <div className="w-full max-w-md bg-slate-900/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl overflow-hidden shadow-2xl relative">
+          {/* Header */}
+          <div className="p-6 sm:p-8 text-center border-b border-slate-800 relative bg-gradient-to-r from-emerald-600/20 via-indigo-600/10 to-slate-900">
+            <div className="w-16 h-16 mx-auto mb-3 rounded-2xl overflow-hidden border-2 border-emerald-400/40 shadow-lg shadow-emerald-500/10 bg-slate-800 flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+            </div>
+            <h1 className="text-xl font-bold text-white tracking-tight">Review Copied!</h1>
+            <p className="text-sm text-slate-400 mt-2">Thank you! You can now complete your payment below.</p>
+          </div>
+
+          {/* QR Code Section */}
+          <div className="p-6 sm:p-8 flex flex-col items-center text-center">
+            <div className="bg-white p-4 rounded-3xl shadow-lg border-4 border-slate-100 flex items-center justify-center">
+              <QRCodeSVG 
+                value={upiUrl} 
+                size={220}
+                level="M"
+                includeMargin={false}
+              />
+            </div>
+            <p className="text-slate-300 font-bold mt-6 tracking-wide">Scan to Pay via any UPI App</p>
+            <div className="flex items-center gap-4 mt-4 opacity-60">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">GPay</span>
+              <span className="w-1 h-1 rounded-full bg-slate-700"></span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">PhonePe</span>
+              <span className="w-1 h-1 rounded-full bg-slate-700"></span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Paytm</span>
+            </div>
+
+            <a 
+              href={upiUrl}
+              className="mt-8 w-full py-4 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <QrCode className="w-5 h-5" />
+              Pay via UPI App Now
+            </a>
+            <button 
+              onClick={() => setShowPayment(false)}
+              className="mt-4 text-xs font-bold text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-start p-3 sm:p-6 font-sans relative overflow-x-hidden">
       {/* Background Decorative Ambient Glows */}
@@ -112,8 +193,8 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
           </div>
 
           <div className="w-16 h-16 mx-auto mb-3 rounded-2xl overflow-hidden border-2 border-amber-400/40 shadow-lg shadow-amber-500/10 bg-slate-800 flex items-center justify-center text-2xl font-bold text-amber-400">
-            {business.logoUrl ? (
-              <img src={business.logoUrl} alt={business.name} className="w-full h-full object-cover" />
+            {business.logo_url ? (
+              <img src={business.logo_url} alt={business.name} className="w-full h-full object-cover" />
             ) : (
               business.name.substring(0, 2).toUpperCase()
             )}
@@ -122,9 +203,9 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
           <h1 className="text-xl font-bold text-white tracking-tight">{business.name}</h1>
           <p className="text-xs text-slate-400 mt-1">{business.tagline}</p>
 
-          {business.offerBanner && (
+          {business.offer_banner && (
             <div className="mt-3 text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl py-1.5 px-3 font-medium animate-pulse">
-              {business.offerBanner}
+              {business.offer_banner}
             </div>
           )}
         </div>
@@ -284,7 +365,7 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
                   <MessageSquareHeart className="w-10 h-10 text-amber-400 mx-auto" />
                   <h3 className="text-base font-bold text-white">Thank You for Helping Us Improve</h3>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Your message has been sent directly to <strong className="text-white">{business.ownerName || 'Management'}</strong>. We take every comment seriously and appreciate your honest feedback.
+                    Your message has been sent directly to <strong className="text-white">{business.owner_name || 'Management'}</strong>. We take every comment seriously and appreciate your honest feedback.
                   </p>
                 </div>
               ) : (
@@ -292,7 +373,7 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
                   <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-2.5 text-xs text-amber-300">
                     <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                     <span>
-                      <strong>Direct Manager Communication:</strong> This note goes directly to owner {business.ownerName} to ensure your concerns are handled personally.
+                      <strong>Direct Manager Communication:</strong> This note goes directly to owner {business.owner_name || 'Management'} to ensure your concerns are handled personally.
                     </span>
                   </div>
 

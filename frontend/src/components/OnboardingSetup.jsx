@@ -6,12 +6,26 @@ import { INDIAN_STATES_AND_CITIES } from '../utils/indianStates';
 import { completeBusinessSetup, getProductSuggestions, analyzeBusiness, getGoogleAuthUrl } from '../services/apiService';
 
 export default function OnboardingSetup({ onComplete }) {
-  const [step, setStep] = useState(1);
+  const loadInitialState = () => {
+    const saved = localStorage.getItem('onboardingState');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  };
+
+  const initialState = loadInitialState();
+
+  const [step, setStep] = useState(initialState?.step || 1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(initialState?.formData || {
     mobile_number: '',
     name: '',
     category: BUSINESS_CATEGORIES[0].id,
@@ -24,10 +38,10 @@ export default function OnboardingSetup({ onComplete }) {
     city: ''
   });
 
-  const [customCategory, setCustomCategory] = useState('');
+  const [customCategory, setCustomCategory] = useState(initialState?.customCategory || '');
   const [customCategoryError, setCustomCategoryError] = useState(false);
-  const [customState, setCustomState] = useState('');
-  const [customCity, setCustomCity] = useState('');
+  const [customState, setCustomState] = useState(initialState?.customState || '');
+  const [customCity, setCustomCity] = useState(initialState?.customCity || '');
 
   const [customItem, setCustomItem] = useState('');
   const [suggestedItems, setSuggestedItems] = useState([]);
@@ -37,20 +51,17 @@ export default function OnboardingSetup({ onComplete }) {
   const [searchingPlaces, setSearchingPlaces] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
 
-  // Restore state from localStorage if returning from Google Auth
+  // Persist state to localStorage whenever it changes
   useEffect(() => {
-    const savedState = localStorage.getItem('onboardingState');
-    if (savedState) {
-      try {
-        const parsed = JSON.parse(savedState);
-        setFormData(parsed.formData);
-        setStep(4); // Jump to analysis step after google auth
-        localStorage.removeItem('onboardingState');
-      } catch (err) {
-        console.error(err);
-      }
-    }
-  }, []);
+    localStorage.setItem('onboardingState', JSON.stringify({ 
+      formData, 
+      step,
+      customCategory,
+      customState,
+      customCity
+    }));
+  }, [formData, step, customCategory, customState, customCity]);
+
 
   // Fetch suggestions when category, state, city, or typed item changes
   useEffect(() => {
@@ -61,7 +72,7 @@ export default function OnboardingSetup({ onComplete }) {
           const categoryName = BUSINESS_CATEGORIES.find(c => c.id === formData.category)?.name || formData.category;
           const finalState = formData.state === 'Other' ? customState : formData.state;
           const finalCity = formData.city === 'Other' ? customCity : formData.city;
-          const suggestions = await getProductSuggestions(categoryName, finalState, finalCity, customItem);
+          const suggestions = await getProductSuggestions(categoryName, finalState, finalCity, customItem, formData.top_selling_items);
           setSuggestedItems(suggestions || []);
         } catch (err) {
           console.error('Failed to get suggestions', err);
@@ -75,7 +86,7 @@ export default function OnboardingSetup({ onComplete }) {
       }, 500);
       return () => clearTimeout(delayFn);
     }
-  }, [step, formData.category, formData.state, formData.city, customState, customCity, customItem]);
+  }, [step, formData.category, formData.state, formData.city, customState, customCity, customItem, formData.top_selling_items]);
 
   useEffect(() => {
     if (step === 3 && locationSearch && locationSearch.length > 2) {
@@ -195,7 +206,7 @@ export default function OnboardingSetup({ onComplete }) {
     setStep(4);
     try {
       const categoryName = BUSINESS_CATEGORIES.find(c => c.id === formData.category)?.name || formData.category;
-      const analysis = await analyzeBusiness(formData.name, categoryName, formData.business_location);
+      const analysis = await analyzeBusiness(formData.name, categoryName, formData.business_location, formData.city, formData.top_selling_items);
       setFormData(prev => ({
         ...prev,
         ai_analysis_results: analysis || {},
@@ -230,6 +241,7 @@ export default function OnboardingSetup({ onComplete }) {
         localStorage.setItem('userStatus', 'active');
         localStorage.setItem('createdAt', res.user.created_at);
         localStorage.setItem('subscriptionEndsAt', res.user.subscription_ends_at || '');
+        localStorage.removeItem('onboardingState');
         if (onComplete) onComplete();
       }
     } catch (err) {

@@ -71,6 +71,7 @@ async function initTablesMysql(pool) {
       google_review_url VARCHAR(1024),
       target_keywords TEXT,
       offer_banner VARCHAR(1024),
+      upi_id TEXT,
       total_scans INT DEFAULT 0,
       google_review_count INT DEFAULT 0,
       avg_rating DECIMAL(2,1) DEFAULT 0.0,
@@ -80,6 +81,12 @@ async function initTablesMysql(pool) {
       google_account_id VARCHAR(255),
       auto_reply_enabled BOOLEAN DEFAULT FALSE,
       language VARCHAR(50) DEFAULT 'en',
+      mobile_number VARCHAR(255),
+      top_selling_items TEXT,
+      business_location VARCHAR(255),
+      ai_analysis_results TEXT,
+      business_details TEXT,
+      seo_last_updated TIMESTAMP NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
   `;
@@ -161,6 +168,12 @@ async function initTablesMysql(pool) {
     await pool.query("ALTER TABLE users ADD COLUMN role ENUM('user', 'admin') DEFAULT 'user'");
   } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN language VARCHAR(50) DEFAULT 'en'"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN mobile_number VARCHAR(255)"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN top_selling_items TEXT"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN business_location VARCHAR(255)"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN ai_analysis_results TEXT"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN business_details TEXT"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN seo_last_updated TIMESTAMP NULL"); } catch (err) {}
   await pool.query(businessQuery);
   await pool.query(googleReviewsQuery);
   await pool.query(feedbackQuery);
@@ -191,6 +204,12 @@ function initTablesSqlite(database) {
       // Ignore error if column already exists
     });
     database.run(`ALTER TABLE businesses ADD COLUMN language TEXT DEFAULT 'en'`, (err) => {});
+    database.run(`ALTER TABLE businesses ADD COLUMN mobile_number TEXT`, (err) => {});
+    database.run(`ALTER TABLE businesses ADD COLUMN top_selling_items TEXT`, (err) => {});
+    database.run(`ALTER TABLE businesses ADD COLUMN business_location TEXT`, (err) => {});
+    database.run(`ALTER TABLE businesses ADD COLUMN ai_analysis_results TEXT`, (err) => {});
+    database.run(`ALTER TABLE businesses ADD COLUMN business_details TEXT`, (err) => {});
+    database.run(`ALTER TABLE businesses ADD COLUMN seo_last_updated DATETIME`, (err) => {});
 
     database.run(`
       CREATE TABLE IF NOT EXISTS businesses (
@@ -205,6 +224,7 @@ function initTablesSqlite(database) {
         google_review_url TEXT,
         target_keywords TEXT,
         offer_banner TEXT,
+        upi_id TEXT,
         total_scans INTEGER DEFAULT 0,
         google_review_count INTEGER DEFAULT 0,
         avg_rating REAL DEFAULT 0.0,
@@ -214,6 +234,12 @@ function initTablesSqlite(database) {
         google_account_id TEXT,
         auto_reply_enabled INTEGER DEFAULT 0,
         language TEXT DEFAULT 'en',
+        mobile_number TEXT,
+        top_selling_items TEXT,
+        business_location TEXT,
+        ai_analysis_results TEXT,
+        business_details TEXT,
+        seo_last_updated DATETIME,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);

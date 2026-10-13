@@ -173,6 +173,8 @@ function initTablesSqlite(database) {
     database.run(`ALTER TABLE businesses ADD COLUMN business_location TEXT`, (err) => {});
     database.run(`ALTER TABLE businesses ADD COLUMN ai_analysis_results TEXT`, (err) => {});
     database.run(`ALTER TABLE businesses ADD COLUMN language TEXT DEFAULT 'en'`, (err) => {});
+    database.run(`ALTER TABLE businesses ADD COLUMN business_details TEXT`, (err) => {});
+    database.run(`ALTER TABLE businesses ADD COLUMN seo_last_updated DATETIME`, (err) => {});
 
     database.run(`
       CREATE TABLE IF NOT EXISTS businesses (
@@ -200,6 +202,8 @@ function initTablesSqlite(database) {
         business_location TEXT,
         ai_analysis_results TEXT,
         language TEXT DEFAULT 'en',
+        business_details TEXT,
+        seo_last_updated DATETIME,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);

@@ -2,7 +2,7 @@ require('dotenv').config({ override: true });
 const express = require('express');
 const OpenAI = require('openai');
 const { google } = require('googleapis');
-// const cron = require('node-cron');
+const cron = require('node-cron');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -124,14 +124,14 @@ app.get('/api/business/:id', async (req, res) => {
 
 // Update business profile
 app.put('/api/business/me', authenticate, async (req, res) => {
-  const { name, tagline, category, owner_name, google_place_id, google_review_url, target_keywords, offer_banner, auto_reply_enabled, language } = req.body;
+  const { name, tagline, category, owner_name, google_place_id, google_review_url, target_keywords, offer_banner, upi_id, auto_reply_enabled, language, business_details } = req.body;
   try {
     await query(
       `UPDATE businesses SET 
         name = ?, tagline = ?, category = ?, owner_name = ?, 
-        google_place_id = ?, google_review_url = ?, target_keywords = ?, offer_banner = ?, auto_reply_enabled = ?, language = ?
+        google_place_id = ?, google_review_url = ?, target_keywords = ?, offer_banner = ?, upi_id = ?, auto_reply_enabled = ?, language = ?, business_details = ?
       WHERE user_id = ?`,
-      [name, tagline, category, owner_name, google_place_id, google_review_url, target_keywords, offer_banner, auto_reply_enabled, language || 'en', req.user.id]
+      [name, tagline, category, owner_name, google_place_id, google_review_url, target_keywords, offer_banner, upi_id, auto_reply_enabled, language || 'en', business_details, req.user.id]
     );
     res.json({ success: true });
   } catch (error) {
@@ -142,14 +142,14 @@ app.put('/api/business/me', authenticate, async (req, res) => {
 
 // Complete Setup and Activate User
 app.post('/api/business/setup-complete', authenticate, async (req, res) => {
-  const { name, tagline, category, google_review_url, target_keywords, mobile_number, top_selling_items, business_location, ai_analysis_results, language } = req.body;
+  const { name, tagline, category, google_review_url, target_keywords, mobile_number, top_selling_items, business_location, ai_analysis_results, language, upi_id } = req.body;
   try {
     // 1. Update business
     await query(
       `UPDATE businesses SET 
-        name = ?, tagline = ?, category = ?, google_review_url = ?, target_keywords = ?, mobile_number = ?, top_selling_items = ?, business_location = ?, ai_analysis_results = ?, language = ?
+        name = ?, tagline = ?, category = ?, google_review_url = ?, target_keywords = ?, mobile_number = ?, top_selling_items = ?, business_location = ?, ai_analysis_results = ?, language = ?, upi_id = ?
       WHERE user_id = ?`,
-      [name, tagline, category, google_review_url, target_keywords, mobile_number, JSON.stringify(top_selling_items || []), business_location, JSON.stringify(ai_analysis_results || {}), language || 'en', req.user.id]
+      [name, tagline, category, google_review_url, target_keywords, mobile_number, JSON.stringify(top_selling_items || []), business_location, JSON.stringify(ai_analysis_results || {}), language || 'en', upi_id, req.user.id]
     );
 
     // 2. Activate user
@@ -357,8 +357,20 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 app.post('/api/generate-review', async (req, res) => {
   const { businessName, category, rating, topics, instructions, language } = req.body;
   try {
-    const languageInstruction = language && language.toLowerCase() !== 'en' && language.toLowerCase() !== 'english'
-      ? `\n      CRITICAL: Write the review words in ${language} language, BUT use ONLY the English alphabet (Romanized/transliterated script). For example, if the language is Hindi, you must output 'Bahut badhiya' instead of 'बहुत बढ़िया'. DO NOT use any native script.`
+    const langMap = {
+      en: 'English',
+      hi: 'Hindi',
+      or: 'Odia',
+      bn: 'Bengali',
+      te: 'Telugu',
+      ta: 'Tamil',
+      mr: 'Marathi',
+      gu: 'Gujarati'
+    };
+    const fullLang = langMap[language] || language || 'English';
+
+    const languageInstruction = fullLang.toLowerCase() !== 'english'
+      ? `\n      CRITICAL: Write the review words in ${fullLang} language, BUT use ONLY the English alphabet (Romanized/transliterated script). For example, if the language is Hindi, you must output 'Bahut badhiya' instead of 'बहुत बढ़िया'. DO NOT use any native script.`
       : '';
 
     const prompt = `
@@ -390,13 +402,16 @@ app.post('/api/generate-review', async (req, res) => {
 });
 
 app.post('/api/business/suggest-products', async (req, res) => {
-  const { category, state, city, query: typedQuery } = req.body;
+  const { category, state, city, query: typedQuery, existingItems } = req.body;
   try {
     const locationContext = (state && city) ? ` located in ${city}, ${state}, India` : ' in the Indian market';
     const typingContext = (typedQuery && typedQuery.trim().length > 1) 
       ? ` The user is currently typing or interested in: "${typedQuery.trim()}". Suggest items that are highly related to this, auto-complete it, or represent popular variations of it.` 
       : '';
-    const prompt = `You are a business consultant specializing in the Indian market. Suggest 5 to 10 top-selling or highly popular products/items for a business in the "${category}" category${locationContext}.${typingContext} The suggestions MUST be highly relevant to the local consumers in that native region.
+    const existingContext = (existingItems && existingItems.length > 0)
+      ? ` The user has already selected these top-selling items: ${existingItems.join(', ')}. Suggest new items that complement these or belong to the exact same niche/cuisine, but DO NOT suggest items already in this list.`
+      : '';
+    const prompt = `You are a business consultant specializing in the Indian market. Suggest 5 to 10 top-selling or highly popular products/items for a business in the "${category}" category${locationContext}.${typingContext}${existingContext} The suggestions MUST be highly relevant to the local consumers in that native region.
 Return ONLY a valid JSON array of strings (e.g. ["Item 1", "Item 2"]). No markdown, no conversational text.`;
     
     const response = await openai.chat.completions.create({
@@ -417,9 +432,11 @@ Return ONLY a valid JSON array of strings (e.g. ["Item 1", "Item 2"]). No markdo
 });
 
 app.post('/api/business/analyze', async (req, res) => {
-  const { businessName, category, location } = req.body;
+  const { businessName, category, location, city, topSellingItems } = req.body;
   try {
-    const prompt = `You are an expert business growth analyst specializing in the Indian market. Analyze a business named "${businessName}" in the "${category}" category located in/around "${location || 'their local area'}". The analysis MUST be tailored specifically for Indian consumers and local search trends.
+    const locStr = city ? city : (location || 'their local area');
+    const itemsContext = (topSellingItems && topSellingItems.length > 0) ? ` Their core products/specialties are: ${topSellingItems.join(', ')}.` : '';
+    const prompt = `You are an expert business growth analyst specializing in the Indian market. Analyze a business named "${businessName}" in the "${category}" category located in/around "${locStr}".${itemsContext} The analysis MUST be tailored specifically for Indian consumers and local search trends. It MUST be highly specific to these actual products and the exact local city (do not use generic placeholders like [local area] or [city]).
 Provide a JSON object with the following keys:
 - "topSearchItems": An array of 3-5 things people in India are likely searching for when they need this business.
 - "trendingKeywords": An array of 3-5 trending SEO keywords in India for this business.
@@ -450,6 +467,97 @@ Return ONLY valid JSON. No markdown formatting or extra text.`;
   } catch (error) {
     console.error('Analyze Business Error:', error);
     res.status(500).json({ error: 'Failed to analyze business' });
+  }
+});
+
+app.post('/api/business/analyze-link', authenticate, async (req, res) => {
+  const { googleReviewUrl, businessName, category, businessDetails, topSellingItems } = req.body;
+  try {
+    let topSelling = [];
+    try { topSelling = typeof topSellingItems === 'string' ? JSON.parse(topSellingItems || '[]') : topSellingItems; } catch(e){}
+    
+    const itemsContext = (topSelling && topSelling.length > 0) ? ` Their core products/specialties are: ${topSelling.join(', ')}.` : '';
+    const detailsContext = businessDetails ? ` Business Details: "${businessDetails}".` : '';
+    const linkContext = googleReviewUrl ? ` Google Maps Link: "${googleReviewUrl}".` : '';
+
+    const prompt = `You are an expert SEO analyst. Analyze a business named "${businessName}" in the "${category}" category.${linkContext}${itemsContext}${detailsContext}
+Generate a comma-separated list of 4 to 6 highly specific, high-converting local SEO keywords tailored to these actual products and details. Do NOT return JSON, just the comma-separated string of keywords.`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    const newKeywords = response.choices[0].message.content.trim();
+    res.json({ keywords: newKeywords });
+  } catch (error) {
+    console.error('Analyze Link Error:', error);
+    res.status(500).json({ error: 'Failed to analyze link' });
+  }
+});
+
+app.post('/api/business/sync-url', authenticate, async (req, res) => {
+  const { url } = req.body;
+  try {
+    const businesses = await query('SELECT * FROM businesses WHERE user_id = ?', [req.user.id]);
+    if (!businesses.length) return res.status(404).json({ error: 'Business not found' });
+    const business = businesses[0];
+
+    let placeId = null;
+    
+    // Check if the user pasted a direct Place ID (they always start with ChIJ)
+    if (url && url.startsWith('ChIJ')) {
+      placeId = url.trim();
+    } else {
+      try {
+        const urlObj = new URL(url);
+        if (urlObj.searchParams.has('placeid')) {
+          placeId = urlObj.searchParams.get('placeid');
+        }
+      } catch(e) {}
+      
+      // Fallback if no placeid in URL
+      if (!placeId) {
+        const searchRes = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(business.name + ' ' + (business.business_location || ''))}&key=${process.env.GOOGLE_API_KEY}`);
+        const searchData = await searchRes.json();
+        if (searchData.results && searchData.results.length > 0) {
+          placeId = searchData.results[0].place_id;
+        }
+      }
+    }
+
+    if (!placeId) {
+      return res.status(400).json({ error: 'Could not detect Google Place ID. Please search your business on the "Google Maps Place ID Finder" tool and paste the direct Place ID (starts with ChIJ...) in the Settings tab.' });
+    }
+
+    // Now fetch reviews using Place Details API
+    const detailsRes = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=reviews,rating,user_ratings_total&key=${process.env.GOOGLE_API_KEY}`);
+    const detailsData = await detailsRes.json();
+
+    if (detailsData.result && detailsData.result.reviews) {
+      const reviews = detailsData.result.reviews;
+      for (const rev of reviews) {
+        const reviewId = 'manual_' + rev.time + '_' + Math.random().toString(36).substring(7);
+        const rating = rev.rating;
+        const comment = rev.text || '';
+        const reviewer = rev.author_name;
+        
+        await query(
+          'INSERT INTO google_reviews (review_id, business_id, rating, comment, reviewer_name) VALUES (?, ?, ?, ?, ?)',
+          [reviewId, business.id, rating, comment, reviewer]
+        );
+      }
+      
+      await query(
+        'UPDATE businesses SET google_review_count = ?, avg_rating = ?, google_place_id = ? WHERE id = ?', 
+        [detailsData.result.user_ratings_total || reviews.length, detailsData.result.rating || 0, placeId, business.id]
+      );
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Sync URL Error:', error);
+    res.status(500).json({ error: 'Failed to sync' });
   }
 });
 
@@ -834,6 +942,45 @@ if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`🚀 Backend running on http://localhost:${PORT}`);
   });
+
+  // Automated Job: Refresh SEO Keywords every 10 days for active businesses
+  cron.schedule('0 2 * * *', async () => {
+    console.log('[Cron] Running Automated SEO Analysis...');
+    try {
+      // Find businesses where seo_last_updated is null OR older than 10 days
+      const businesses = await query(`
+        SELECT id, name, category, business_location, top_selling_items, business_details, target_keywords
+        FROM businesses 
+        WHERE seo_last_updated IS NULL OR seo_last_updated < datetime('now', '-10 days')
+      `);
+      
+      for (const biz of businesses) {
+        console.log(`[Cron] Refreshing SEO for: ${biz.name}`);
+        
+        // Prepare context
+        let topSelling = [];
+        try { topSelling = JSON.parse(biz.top_selling_items || '[]'); } catch(e){}
+        const itemsContext = (topSelling && topSelling.length > 0) ? ` Their core products/specialties are: ${topSelling.join(', ')}.` : '';
+        const detailsContext = biz.business_details ? ` Business Details: "${biz.business_details}".` : '';
+
+        const prompt = `You are an expert SEO analyst. Analyze a business named "${biz.name}" in the "${biz.category}" category located in/around "${biz.business_location}".${itemsContext}${detailsContext} 
+Generate a comma-separated list of 4 to 6 highly specific, high-converting local SEO keywords tailored to these actual products, details, and exact location. Do NOT return JSON, just the comma-separated string of keywords.`;
+
+        const response = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }]
+        });
+
+        const newKeywords = response.choices[0].message.content.trim();
+        
+        await query('UPDATE businesses SET target_keywords = ?, seo_last_updated = CURRENT_TIMESTAMP WHERE id = ?', [newKeywords, biz.id]);
+        console.log(`[Cron] Updated SEO for ${biz.name}: ${newKeywords}`);
+      }
+    } catch (err) {
+      console.error('[Cron] SEO Analysis Job Error:', err);
+    }
+  });
+
   setInterval(() => {}, 1000 * 60 * 60); // Keep alive
 }
 
