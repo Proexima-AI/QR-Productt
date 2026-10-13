@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Building, Key, Star, BarChart3, MessageSquare, ExternalLink, Settings, Save, CheckCircle2, ShieldAlert, Sparkles, Filter, ChevronRight, Share2, CreditCard } from 'lucide-react';
+import { Building, Key, Star, BarChart3, MessageSquare, ExternalLink, Settings, Save, CheckCircle2, ShieldAlert, Sparkles, Filter, ChevronRight, Share2, CreditCard, Loader2, RefreshCw } from 'lucide-react';
 import { BUSINESS_CATEGORIES } from './BusinessPresets';
 import { getGoogleAuthUrl } from '../services/apiService';
 
-export default function ClientDashboard({ business, onUpdateBusiness, internalFeedback, googleReviews = [], onResolveFeedback, onUpgrade }) {
+export default function ClientDashboard({ business, onUpdateBusiness, internalFeedback, googleReviews = [], onResolveFeedback, onUpgrade, onRefresh }) {
   const [activeTab, setActiveTab] = useState('analytics');
   
   const isCustomCategory = business.category && !BUSINESS_CATEGORIES.find(c => c.id === business.category);
@@ -13,6 +13,8 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
   });
   const [customCategory, setCustomCategory] = useState(isCustomCategory ? business.category : '');
   const [customCategoryError, setCustomCategoryError] = useState(false);
+  const [analyzingLink, setAnalyzingLink] = useState(false);
+  const [syncingUrl, setSyncingUrl] = useState(false);
   
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [filterRating, setFilterRating] = useState('all');
@@ -53,6 +55,65 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
+  const handleAnalyzeLink = async () => {
+    if (!formData.google_review_url) return;
+    setAnalyzingLink(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5001/api/business/analyze-link', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          googleReviewUrl: formData.google_review_url,
+          businessName: formData.name,
+          category: formData.category,
+          businessDetails: formData.business_details,
+          topSellingItems: formData.top_selling_items
+        })
+      });
+      const data = await res.json();
+      if (data.keywords) {
+        setFormData({ ...formData, target_keywords: data.keywords });
+      }
+    } catch (err) {
+      console.error('Analyze Link Error:', err);
+    }
+    setAnalyzingLink(false);
+  };
+
+  const handleSyncByUrl = async () => {
+    if (!formData.google_review_url) {
+      alert("Please enter your Google Business Review Link in the Settings tab first.");
+      return;
+    }
+    setSyncingUrl(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5001/api/business/sync-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ url: formData.google_review_url })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Successfully synced latest reviews from URL!");
+        window.location.reload();
+      } else {
+        alert(data.error || "Could not sync reviews from URL. Make sure the URL contains placeid.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to sync.");
+    }
+    setSyncingUrl(false);
+  };
+
   const filteredFeedback = internalFeedback.filter(fb => {
     if (filterRating === 'all') return true;
     return fb.rating === Number(filterRating);
@@ -66,8 +127,8 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
         <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-5 flex flex-col items-center text-center relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-16 bg-gradient-to-r from-indigo-500 to-purple-600 opacity-10"></div>
           <div className="w-20 h-20 rounded-full bg-white border-4 border-white shadow-md flex items-center justify-center text-indigo-600 font-black text-2xl overflow-hidden mb-3 z-10">
-            {business.logoUrl ? (
-              <img src={business.logoUrl} alt={business.name} className="w-full h-full object-cover" />
+            {business.logo_url ? (
+              <img src={business.logo_url} alt={business.name} className="w-full h-full object-cover" />
             ) : (
               business.name.substring(0, 2).toUpperCase()
             )}
@@ -82,7 +143,7 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
             <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2 text-xs font-medium text-slate-500">
               <div className="flex justify-between items-center">
                 <span>Owner</span>
-                <span className="text-slate-900">{business.ownerName}</span>
+                <span className="text-slate-900">{business.owner_name}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span>Category</span>
@@ -152,7 +213,12 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
         <div className="space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-slate-200">
             <h3 className="text-2xl font-black text-slate-900 tracking-tight">Performance Overview</h3>
-            <span className="text-sm font-medium text-slate-500">Updated just now</span>
+            <button 
+              onClick={onRefresh}
+              className="flex items-center gap-2 text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-full border border-indigo-100 shadow-sm transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" /> Refresh Data
+            </button>
           </div>
 
           {/* Key Metrics Cards */}
@@ -163,7 +229,7 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
               </div>
               <span className="text-sm text-slate-500 font-bold uppercase tracking-wider block mb-2 relative z-10">Total Scans</span>
               <div className="text-4xl font-black text-slate-900 relative z-10 flex items-center gap-3">
-                {business.totalScans}
+                {business.total_scans}
                 <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100 flex items-center gap-1">
                   ↗ +18%
                 </span>
@@ -176,7 +242,7 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
               </div>
               <span className="text-sm text-slate-500 font-bold uppercase tracking-wider block mb-2 relative z-10">AI 5-Star Reviews</span>
               <div className="text-4xl font-black text-slate-900 relative z-10 flex items-center gap-3">
-                {business.googleReviewCount}
+                {business.google_review_count}
                 <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100">
                   ★ 4.9 Avg
                 </span>
@@ -189,7 +255,7 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
               </div>
               <span className="text-sm text-slate-500 font-bold uppercase tracking-wider block mb-2 relative z-10">Low-Stars Blocked</span>
               <div className="text-4xl font-black text-slate-900 relative z-10 flex items-center gap-3">
-                {business.interceptedBadReviews}
+                {business.intercepted_bad_reviews}
                 <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-md border border-rose-100">
                   Reputation Safe
                 </span>
@@ -211,7 +277,7 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
             </div>
 
             <a
-              href={business.googleReviewUrl}
+              href={business.google_review_url}
               target="_blank"
               rel="noreferrer"
               className="px-6 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition-all shrink-0 z-10 w-full md:w-auto"
@@ -323,19 +389,29 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
             </div>
             
             {!business.google_access_token ? (
-              <button 
-                onClick={async () => {
-                  try {
-                    const url = await getGoogleAuthUrl();
-                    window.location.href = url;
-                  } catch (e) {
-                    alert("Could not connect to Google at this time.");
-                  }
-                }}
-                className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg shadow hover:bg-indigo-700 transition"
-              >
-                Connect Google Account
-              </button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button 
+                  onClick={async () => {
+                    try {
+                      const url = await getGoogleAuthUrl();
+                      window.location.href = url;
+                    } catch (e) {
+                      alert("Could not connect to Google at this time.");
+                    }
+                  }}
+                  className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg shadow hover:bg-indigo-700 transition"
+                >
+                  Connect Google Account
+                </button>
+                <button 
+                  onClick={handleSyncByUrl}
+                  disabled={syncingUrl}
+                  className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {syncingUrl && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Sync via URL (Fallback)
+                </button>
+              </div>
             ) : (
               <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg border border-emerald-200 font-bold text-sm">
                 <CheckCircle2 className="w-4 h-4" /> Google Connected
@@ -484,6 +560,17 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
               </select>
             </div>
 
+            <div className="md:col-span-2">
+              <label className="block text-slate-700 font-bold mb-2">Business Details (up to 100 words)</label>
+              <textarea
+                value={formData.business_details || ''}
+                onChange={(e) => setFormData({ ...formData, business_details: e.target.value })}
+                placeholder="Write a short description of what makes your business special, your atmosphere, or your best services. Our AI will automatically analyze this to generate the best SEO keywords for you."
+                rows={3}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-sm"
+              />
+            </div>
+
             {/* Section 2: Integrations & AI */}
             <div className="md:col-span-2 mt-4">
               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">Integrations & AI Settings</h4>
@@ -491,21 +578,44 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
 
             <div className="md:col-span-2">
               <label className="block text-slate-700 font-bold mb-2">Google Business Review Link</label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  value={formData.google_review_url || ''}
+                  onChange={(e) => setFormData({ ...formData, google_review_url: e.target.value })}
+                  placeholder="https://search.google.com/local/writereview?placeid=..."
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-sm"
+                />
+                <button
+                  type="button"
+                  onClick={handleAnalyzeLink}
+                  disabled={!formData.google_review_url || analyzingLink}
+                  className="px-4 py-3 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {analyzingLink ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  Analyze SEO
+                </button>
+              </div>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-slate-700 font-bold mb-2">UPI ID (For Post-Review Payments)</label>
               <input
                 type="text"
-                value={formData.googleReviewUrl}
-                onChange={(e) => setFormData({ ...formData, googleReviewUrl: e.target.value })}
-                placeholder="https://search.google.com/local/writereview?placeid=..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-sm"
+                value={formData.upi_id || ''}
+                onChange={(e) => setFormData({ ...formData, upi_id: e.target.value })}
+                placeholder="e.g. businessname@okaxis, 9876543210@ybl"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-sm"
               />
+              <p className="text-xs text-slate-500 mt-2">If provided, customers will automatically be redirected to their preferred UPI app (GPay, PhonePe, Paytm, etc.) to pay their bill immediately after copying the review.</p>
             </div>
 
             <div className="md:col-span-2">
               <label className="block text-slate-700 font-bold mb-2">Target SEO Keywords (For AI Gen)</label>
               <input
                 type="text"
-                value={formData.targetKeywords}
-                onChange={(e) => setFormData({ ...formData, targetKeywords: e.target.value })}
+                value={formData.target_keywords || ''}
+                onChange={(e) => setFormData({ ...formData, target_keywords: e.target.value })}
                 placeholder="e.g. best Italian restaurant, fresh pasta, romantic dinner"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-sm"
               />
@@ -518,8 +628,8 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
               <label className="block text-slate-700 font-bold mb-2">Promotional Customer Incentive Banner</label>
               <input
                 type="text"
-                value={formData.offerBanner}
-                onChange={(e) => setFormData({ ...formData, offerBanner: e.target.value })}
+                value={formData.offer_banner || ''}
+                onChange={(e) => setFormData({ ...formData, offer_banner: e.target.value })}
                 placeholder="e.g. 🎉 Thank you for visiting! Rate your experience & get a 10% coupon!"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-sm"
               />

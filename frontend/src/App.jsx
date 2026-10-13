@@ -29,32 +29,32 @@ function ProtectedDashboard() {
   const subscriptionEndsAt = localStorage.getItem('subscriptionEndsAt');
   const userEmail = localStorage.getItem('userEmail');
 
+  const fetchData = React.useCallback(async () => {
+    if (status !== 'active') {
+      setLoading(false);
+      return;
+    }
+    try {
+      const bData = await getMyBusiness();
+      const fData = await getMyFeedback();
+      const gData = await getGoogleReviews();
+      setBusiness(bData);
+      setFeedbacks(fData);
+      setGoogleReviews(gData);
+    } catch (err) {
+      console.error('Failed to load dashboard data', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [status]);
+
   useEffect(() => {
     if (!localStorage.getItem('token')) {
       navigate('/login');
       return;
     }
-
-    if (status === 'active') {
-      const fetchData = async () => {
-        try {
-          const bData = await getMyBusiness();
-          const fData = await getMyFeedback();
-          const gData = await getGoogleReviews();
-          setBusiness(bData);
-          setFeedbacks(fData);
-          setGoogleReviews(gData);
-        } catch (err) {
-          console.error('Failed to load dashboard data', err);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchData();
-    } else {
-      setLoading(false);
-    }
-  }, [navigate, status]);
+    fetchData();
+  }, [navigate, fetchData]);
 
   const [trialDaysLeft, setTrialDaysLeft] = useState(0);
   const [isTrialActive, setIsTrialActive] = useState(false);
@@ -126,6 +126,7 @@ function ProtectedDashboard() {
               setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, status: 'Resolved' } : f));
             }}
             onUpgrade={() => setShowPayment(true)}
+            onRefresh={fetchData}
           />
         )}
         {activeView === 'qr' && (

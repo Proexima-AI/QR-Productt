@@ -89,13 +89,13 @@ export const sendChatMessage = async (data) => {
   return res.data;
 };
 
-export const getProductSuggestions = async (category, state, city, query) => {
-  const res = await axios.post(`${API_URL}/business/suggest-products`, { category, state, city, query }, getAuthHeaders());
+export const getProductSuggestions = async (category, state, city, query, existingItems) => {
+  const res = await axios.post(`${API_URL}/business/suggest-products`, { category, state, city, query, existingItems }, getAuthHeaders());
   return res.data.suggestions;
 };
 
-export const analyzeBusiness = async (businessName, category, location) => {
-  const res = await axios.post(`${API_URL}/business/analyze`, { businessName, category, location }, getAuthHeaders());
+export const analyzeBusiness = async (businessName, category, location, city, topSellingItems) => {
+  const res = await axios.post(`${API_URL}/business/analyze`, { businessName, category, location, city, topSellingItems }, getAuthHeaders());
   return res.data.analysis;
 };
 

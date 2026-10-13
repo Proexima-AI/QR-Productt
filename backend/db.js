@@ -54,6 +54,8 @@ async function initTablesMysql(pool) {
       business_location VARCHAR(1024),
       ai_analysis_results TEXT,
       language VARCHAR(50) DEFAULT 'en',
+      business_details TEXT,
+      seo_last_updated TIMESTAMP NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
   `;
@@ -149,6 +151,8 @@ async function initTablesMysql(pool) {
   try { await pool.query("ALTER TABLE businesses ADD COLUMN business_location VARCHAR(1024)"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN ai_analysis_results TEXT"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN language VARCHAR(50) DEFAULT 'en'"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN business_details TEXT"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN seo_last_updated TIMESTAMP NULL"); } catch (err) {}
   await pool.query(businessQuery);
   await pool.query(googleReviewsQuery);
   await pool.query(feedbackQuery);
@@ -185,6 +189,8 @@ function initTablesSqlite(database) {
     database.run(`ALTER TABLE businesses ADD COLUMN business_location TEXT`, (err) => {});
     database.run(`ALTER TABLE businesses ADD COLUMN ai_analysis_results TEXT`, (err) => {});
     database.run(`ALTER TABLE businesses ADD COLUMN language TEXT DEFAULT 'en'`, (err) => {});
+    database.run(`ALTER TABLE businesses ADD COLUMN business_details TEXT`, (err) => {});
+    database.run(`ALTER TABLE businesses ADD COLUMN seo_last_updated DATETIME`, (err) => {});
 
     database.run(`
       CREATE TABLE IF NOT EXISTS businesses (
@@ -212,6 +218,8 @@ function initTablesSqlite(database) {
         business_location TEXT,
         ai_analysis_results TEXT,
         language TEXT DEFAULT 'en',
+        business_details TEXT,
+        seo_last_updated DATETIME,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
