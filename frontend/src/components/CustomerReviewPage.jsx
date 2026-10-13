@@ -17,7 +17,7 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   // Find category details
-  const categoryObj = BUSINESS_CATEGORIES.find(c => c.id === business.category) || BUSINESS_CATEGORIES[0];
+  const categoryObj = BUSINESS_CATEGORIES.find(c => c.id === business.category) || BUSINESS_CATEGORIES.find(c => c.id === 'others') || BUSINESS_CATEGORIES[0];
   const chipsList = categoryObj.chips;
 
   // Toggle Chip selection
@@ -38,7 +38,8 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
         category: business.category,
         rating,
         topics: selectedChips,
-        instructions: tone + ' tone. Keywords: ' + (business.targetKeywords || '')
+        instructions: tone + ' tone. Keywords: ' + (business.targetKeywords || ''),
+        language: business.language
       });
       setReviewText(result);
     } catch (err) {

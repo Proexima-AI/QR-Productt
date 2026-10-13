@@ -101,6 +101,22 @@ export const BUSINESS_CATEGORIES = [
     defaultKeywords: 'best local shop, clothing boutique, gift store',
     googlePlaceId: 'ChIJN1t_tDeuEmsRUsoyG83frY4',
     googleReviewUrl: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4'
+  },
+  {
+    id: 'others',
+    name: 'Others',
+    icon: 'Building',
+    chips: [
+      'Great Service',
+      'High Quality',
+      'Professional Staff',
+      'Good Value',
+      'Clean Environment',
+      'Timely Delivery'
+    ],
+    defaultKeywords: 'best service, top rated, highly recommended',
+    googlePlaceId: 'ChIJN1t_tDeuEmsRUsoyG83frY4',
+    googleReviewUrl: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4'
   }
 ];
 

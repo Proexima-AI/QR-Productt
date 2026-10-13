@@ -8,12 +8,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
-const { query } = require('./db');
+const { query } = require('./db.local');
 
 const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID || 'YOUR_CLIENT_ID',
-  process.env.GOOGLE_CLIENT_SECRET || 'YOUR_CLIENT_SECRET',
-  process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5001/api/google/callback'
+  (process.env.GOOGLE_CLIENT_ID || 'YOUR_CLIENT_ID').trim(),
+  (process.env.GOOGLE_CLIENT_SECRET || 'YOUR_CLIENT_SECRET').trim(),
+  (process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5001/api/google/callback').trim()
 );
 
 const app = express();
@@ -124,14 +124,14 @@ app.get('/api/business/:id', async (req, res) => {
 
 // Update business profile
 app.put('/api/business/me', authenticate, async (req, res) => {
-  const { name, tagline, category, owner_name, google_place_id, google_review_url, target_keywords, offer_banner, auto_reply_enabled } = req.body;
+  const { name, tagline, category, owner_name, google_place_id, google_review_url, target_keywords, offer_banner, auto_reply_enabled, language } = req.body;
   try {
     await query(
       `UPDATE businesses SET 
         name = ?, tagline = ?, category = ?, owner_name = ?, 
-        google_place_id = ?, google_review_url = ?, target_keywords = ?, offer_banner = ?, auto_reply_enabled = ?
+        google_place_id = ?, google_review_url = ?, target_keywords = ?, offer_banner = ?, auto_reply_enabled = ?, language = ?
       WHERE user_id = ?`,
-      [name, tagline, category, owner_name, google_place_id, google_review_url, target_keywords, offer_banner, auto_reply_enabled, req.user.id]
+      [name, tagline, category, owner_name, google_place_id, google_review_url, target_keywords, offer_banner, auto_reply_enabled, language || 'en', req.user.id]
     );
     res.json({ success: true });
   } catch (error) {
@@ -142,14 +142,14 @@ app.put('/api/business/me', authenticate, async (req, res) => {
 
 // Complete Setup and Activate User
 app.post('/api/business/setup-complete', authenticate, async (req, res) => {
-  const { name, tagline, category, google_review_url, target_keywords, mobile_number, top_selling_items, business_location, ai_analysis_results } = req.body;
+  const { name, tagline, category, google_review_url, target_keywords, mobile_number, top_selling_items, business_location, ai_analysis_results, language } = req.body;
   try {
     // 1. Update business
     await query(
       `UPDATE businesses SET 
-        name = ?, tagline = ?, category = ?, google_review_url = ?, target_keywords = ?, mobile_number = ?, top_selling_items = ?, business_location = ?, ai_analysis_results = ?
+        name = ?, tagline = ?, category = ?, google_review_url = ?, target_keywords = ?, mobile_number = ?, top_selling_items = ?, business_location = ?, ai_analysis_results = ?, language = ?
       WHERE user_id = ?`,
-      [name, tagline, category, google_review_url, target_keywords, mobile_number, JSON.stringify(top_selling_items || []), business_location, JSON.stringify(ai_analysis_results || {}), req.user.id]
+      [name, tagline, category, google_review_url, target_keywords, mobile_number, JSON.stringify(top_selling_items || []), business_location, JSON.stringify(ai_analysis_results || {}), language || 'en', req.user.id]
     );
 
     // 2. Activate user
@@ -355,18 +355,24 @@ app.put('/api/feedback/:id/resolve', authenticate, async (req, res) => {
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 app.post('/api/generate-review', async (req, res) => {
-  const { businessName, category, rating, topics, instructions } = req.body;
+  const { businessName, category, rating, topics, instructions, language } = req.body;
   try {
+    const languageInstruction = language && language.toLowerCase() !== 'en' && language.toLowerCase() !== 'english'
+      ? `\n      CRITICAL: Write the review words in ${language} language, BUT use ONLY the English alphabet (Romanized/transliterated script). For example, if the language is Hindi, you must output 'Bahut badhiya' instead of 'बहुत बढ़िया'. DO NOT use any native script.`
+      : '';
+
     const prompt = `
       You are an expert copywriter acting as a highly satisfied customer writing a Google review.
       Business Name: ${businessName}
       Category: ${category}
       Star Rating: ${rating}/5
-      Topics mentioned: ${topics.join(', ')}
+      Topics mentioned: ${topics ? topics.join(', ') : 'None'}
       Special Instructions: ${instructions || 'None'}
+      ${languageInstruction}
 
       Write a glowing, authentic-sounding ${rating}-star Google review for this business. 
       Keep it between 2 to 4 sentences. It should sound human, genuine, and specifically mention the topics if provided.
+      The review must be highly SEO friendly and use relevant keywords naturally.
       Do not include quotes or surrounding conversational text. Just the review itself.
     `;
 
@@ -384,9 +390,13 @@ app.post('/api/generate-review', async (req, res) => {
 });
 
 app.post('/api/business/suggest-products', async (req, res) => {
-  const { category } = req.body;
+  const { category, state, city, query: typedQuery } = req.body;
   try {
-    const prompt = `You are a business consultant specializing in the Indian market. Suggest 5 to 10 top-selling or highly popular products/items for a business in the "${category}" category. The suggestions MUST be highly relevant to the Indian business market and local consumers.
+    const locationContext = (state && city) ? ` located in ${city}, ${state}, India` : ' in the Indian market';
+    const typingContext = (typedQuery && typedQuery.trim().length > 1) 
+      ? ` The user is currently typing or interested in: "${typedQuery.trim()}". Suggest items that are highly related to this, auto-complete it, or represent popular variations of it.` 
+      : '';
+    const prompt = `You are a business consultant specializing in the Indian market. Suggest 5 to 10 top-selling or highly popular products/items for a business in the "${category}" category${locationContext}.${typingContext} The suggestions MUST be highly relevant to the local consumers in that native region.
 Return ONLY a valid JSON array of strings (e.g. ["Item 1", "Item 2"]). No markdown, no conversational text.`;
     
     const response = await openai.chat.completions.create({
@@ -448,6 +458,29 @@ app.post('/api/business/search-places', async (req, res) => {
   if (!location || location.length < 3) return res.json([]);
   
   try {
+    const searchQuery = `${businessName || ''} ${category || ''} ${location}`.trim();
+    const apiKey = process.env.GOOGLE_API_KEY;
+    
+    if (apiKey) {
+      const googleResponse = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${apiKey}`);
+      const data = await googleResponse.json();
+
+      if (data.status === 'OK' && data.results && Array.isArray(data.results)) {
+        let places = data.results.map(place => ({
+          name: place.name,
+          address: place.formatted_address,
+          rating: place.rating || 0,
+          reviewsCount: place.user_ratings_total || 0
+        }));
+        
+        // Sort rank wise (highest rating and most reviews first)
+        places.sort((a, b) => (b.reviewsCount * b.rating) - (a.reviewsCount * a.rating));
+
+        return res.json(places.slice(0, 8)); // Return top 8 ranked places
+      }
+    }
+
+    // Fallback to OpenAI if Google Maps API key is invalid or request fails
     const prompt = `You are a local search engine. The user is searching for a business named "${businessName || 'Business'}" in the category "${category || 'Store'}" near "${location}".
 Return a JSON array of 3 to 4 realistic (but fictional or real) business locations in that specific area that match the query. Each object should have:
 - "name": The name of the business (use the provided name if possible, or similar competitors)
@@ -795,14 +828,14 @@ app.get('/api/admin/chats', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
-// const PORT = process.env.PORT || 5001;
-// // START SERVER
-// // if (require.main === module) {
-// //   app.listen(PORT, () => {
-// //     console.log(`🚀 Backend running on http://localhost:${PORT}`);
-// //   });
-// //   setInterval(() => {}, 1000 * 60 * 60); // Keep alive
-// // }
+const PORT = process.env.PORT || 5001;
+// START SERVER
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Backend running on http://localhost:${PORT}`);
+  });
+  setInterval(() => {}, 1000 * 60 * 60); // Keep alive
+}
 
 app.runAutoReplyJob = runAutoReplyJob;
 module.exports = app;

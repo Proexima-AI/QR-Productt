@@ -79,6 +79,7 @@ async function initTablesMysql(pool) {
       google_refresh_token TEXT,
       google_account_id VARCHAR(255),
       auto_reply_enabled BOOLEAN DEFAULT FALSE,
+      language VARCHAR(50) DEFAULT 'en',
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
   `;
@@ -159,6 +160,7 @@ async function initTablesMysql(pool) {
   try {
     await pool.query("ALTER TABLE users ADD COLUMN role ENUM('user', 'admin') DEFAULT 'user'");
   } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN language VARCHAR(50) DEFAULT 'en'"); } catch (err) {}
   await pool.query(businessQuery);
   await pool.query(googleReviewsQuery);
   await pool.query(feedbackQuery);
@@ -188,6 +190,7 @@ function initTablesSqlite(database) {
     database.run(`ALTER TABLE businesses ADD COLUMN auto_reply_enabled INTEGER DEFAULT 0`, (err) => {
       // Ignore error if column already exists
     });
+    database.run(`ALTER TABLE businesses ADD COLUMN language TEXT DEFAULT 'en'`, (err) => {});
 
     database.run(`
       CREATE TABLE IF NOT EXISTS businesses (
@@ -210,6 +213,7 @@ function initTablesSqlite(database) {
         google_refresh_token TEXT,
         google_account_id TEXT,
         auto_reply_enabled INTEGER DEFAULT 0,
+        language TEXT DEFAULT 'en',
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);

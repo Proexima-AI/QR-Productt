@@ -16,6 +16,7 @@ export function Signup() {
     ownerName: '',
     category: 'restaurant'
   });
+  const [customCategory, setCustomCategory] = useState('');
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -24,7 +25,11 @@ export function Signup() {
     setLoading(true);
     setError('');
     try {
-      const res = await signup(formData);
+      const submitData = { ...formData };
+      if (submitData.category === 'others' && customCategory.trim() !== '') {
+        submitData.category = customCategory.trim();
+      }
+      const res = await signup(submitData);
       localStorage.setItem('token', res.token);
       localStorage.setItem('userStatus', res.user.status);
       localStorage.setItem('createdAt', res.user.created_at);
@@ -79,6 +84,16 @@ export function Signup() {
                 {BUSINESS_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
+
+            {formData.category === 'others' && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">What kind of business?</label>
+                <div className="relative">
+                  <Building className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                  <input required type="text" value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-3 text-white text-sm focus:border-amber-500/50 focus:outline-none" placeholder="e.g. Software Agency" />
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">Email</label>

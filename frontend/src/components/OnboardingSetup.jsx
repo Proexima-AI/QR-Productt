@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Building, Tag, Search, Link2, Sparkles, ArrowRight, ArrowLeft, Loader2, MapPin, Check, Plus, X, TrendingUp, Star, Users, Map } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BUSINESS_CATEGORIES } from './BusinessPresets';
+import { INDIAN_STATES_AND_CITIES } from '../utils/indianStates';
 import { completeBusinessSetup, getProductSuggestions, analyzeBusiness, getGoogleAuthUrl } from '../services/apiService';
 
 export default function OnboardingSetup({ onComplete }) {
@@ -16,10 +17,17 @@ export default function OnboardingSetup({ onComplete }) {
     category: BUSINESS_CATEGORIES[0].id,
     top_selling_items: [],
     business_location: '',
-    google_review_url: '',
     target_keywords: '',
-    ai_analysis_results: {}
+    ai_analysis_results: {},
+    language: 'en',
+    state: '',
+    city: ''
   });
+
+  const [customCategory, setCustomCategory] = useState('');
+  const [customCategoryError, setCustomCategoryError] = useState(false);
+  const [customState, setCustomState] = useState('');
+  const [customCity, setCustomCity] = useState('');
 
   const [customItem, setCustomItem] = useState('');
   const [suggestedItems, setSuggestedItems] = useState([]);
@@ -44,14 +52,16 @@ export default function OnboardingSetup({ onComplete }) {
     }
   }, []);
 
-  // Fetch suggestions when category changes and step is 2
+  // Fetch suggestions when category, state, city, or typed item changes
   useEffect(() => {
-    if (step === 2 && formData.category) {
+    if (step === 2 && formData.category && formData.state && formData.city) {
       const fetchSuggestions = async () => {
         setLoadingSuggestions(true);
         try {
           const categoryName = BUSINESS_CATEGORIES.find(c => c.id === formData.category)?.name || formData.category;
-          const suggestions = await getProductSuggestions(categoryName);
+          const finalState = formData.state === 'Other' ? customState : formData.state;
+          const finalCity = formData.city === 'Other' ? customCity : formData.city;
+          const suggestions = await getProductSuggestions(categoryName, finalState, finalCity, customItem);
           setSuggestedItems(suggestions || []);
         } catch (err) {
           console.error('Failed to get suggestions', err);
@@ -59,9 +69,13 @@ export default function OnboardingSetup({ onComplete }) {
           setLoadingSuggestions(false);
         }
       };
-      fetchSuggestions();
+      
+      const delayFn = setTimeout(() => {
+         fetchSuggestions();
+      }, 500);
+      return () => clearTimeout(delayFn);
     }
-  }, [step, formData.category]);
+  }, [step, formData.category, formData.state, formData.city, customState, customCity, customItem]);
 
   useEffect(() => {
     if (step === 3 && locationSearch && locationSearch.length > 2) {
@@ -95,13 +109,37 @@ export default function OnboardingSetup({ onComplete }) {
 
   const validateStep = () => {
     setError('');
+    setCustomCategoryError(false);
     if (step === 1) {
-      if (!formData.mobile_number || !/^\d{10,}$/.test(formData.mobile_number)) {
-        setError('Please enter a valid mobile number (min 10 digits).');
+      if (!formData.mobile_number || formData.mobile_number.length !== 10) {
+        setError('Please enter a valid 10-digit mobile number.');
         return false;
       }
       if (!formData.name) {
         setError('Business Name is required');
+        return false;
+      }
+    }
+    if (step === 2) {
+      if (formData.category === 'others' && !customCategory.trim()) {
+        setError('Please enter your business type.');
+        setCustomCategoryError(true);
+        return false;
+      }
+      if (!formData.state) {
+        setError('Please select a state.');
+        return false;
+      }
+      if (formData.state === 'Other' && !customState.trim()) {
+        setError('Please enter your state.');
+        return false;
+      }
+      if (!formData.city) {
+        setError('Please select a city.');
+        return false;
+      }
+      if (formData.city === 'Other' && !customCity.trim()) {
+        setError('Please enter your city.');
         return false;
       }
     }
@@ -115,7 +153,12 @@ export default function OnboardingSetup({ onComplete }) {
   };
 
   const nextStep = () => {
-    if (validateStep()) setStep(s => s + 1);
+    if (validateStep()) {
+      // If moving past step 2 and 'others' is selected, update formData.category temporarily if needed? 
+      // Actually it's better to update the category right before submit, or keep it in customCategory and use it during API calls.
+      // Let's modify the handleSubmit to use customCategory.
+      setStep(s => s + 1);
+    }
   };
 
   const prevStep = () => setStep(s => Math.max(1, s - 1));
@@ -167,10 +210,21 @@ export default function OnboardingSetup({ onComplete }) {
   };
 
   const handleSubmit = async () => {
+    if (!validateStep()) return;
     setLoading(true);
     setError('');
     try {
-      const res = await completeBusinessSetup(formData);
+      const submitData = { ...formData };
+      if (submitData.category === 'others' && customCategory.trim()) {
+        submitData.category = customCategory.trim();
+      }
+      if (submitData.state === 'Other' && customState.trim()) {
+        submitData.state = customState.trim();
+      }
+      if (submitData.city === 'Other' && customCity.trim()) {
+        submitData.city = customCity.trim();
+      }
+      const res = await completeBusinessSetup(submitData);
       if (res.success && res.token) {
         localStorage.setItem('token', res.token);
         localStorage.setItem('userStatus', 'active');
@@ -231,7 +285,10 @@ export default function OnboardingSetup({ onComplete }) {
                     <input
                       type="tel"
                       value={formData.mobile_number}
-                      onChange={(e) => setFormData({ ...formData, mobile_number: e.target.value.replace(/\\D/g, '') })}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setFormData({ ...formData, mobile_number: val });
+                      }}
                       className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all font-medium"
                       placeholder="e.g. 9876543210"
                     />
@@ -269,6 +326,77 @@ export default function OnboardingSetup({ onComplete }) {
                         <option key={cat.id} value={cat.id}>{cat.name}</option>
                       ))}
                     </select>
+                  </div>
+
+                  {formData.category === 'others' && (
+                    <div className="space-y-1">
+                      <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                        <Building className="w-4 h-4" /> What kind of business? *
+                      </label>
+                      <input
+                        type="text"
+                        value={customCategory}
+                        onChange={(e) => {
+                          setCustomCategory(e.target.value);
+                          setCustomCategoryError(false);
+                        }}
+                        className={`w-full bg-slate-50 border ${customCategoryError ? 'border-rose-500' : 'border-slate-200'} p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all font-medium`}
+                        placeholder="e.g. Software Agency"
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4" /> State *
+                      </label>
+                      <select
+                        value={formData.state}
+                        onChange={(e) => setFormData({ ...formData, state: e.target.value, city: '' })}
+                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all font-medium"
+                      >
+                        <option value="">Select State</option>
+                        {Object.keys(INDIAN_STATES_AND_CITIES).map(stateName => (
+                          <option key={stateName} value={stateName}>{stateName}</option>
+                        ))}
+                      </select>
+                      {formData.state === 'Other' && (
+                        <input
+                          type="text"
+                          value={customState}
+                          onChange={(e) => setCustomState(e.target.value)}
+                          className="w-full mt-2 bg-slate-50 border border-slate-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all font-medium"
+                          placeholder="Enter State"
+                        />
+                      )}
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4" /> City *
+                      </label>
+                      <select
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        disabled={!formData.state}
+                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all font-medium disabled:opacity-50"
+                      >
+                        <option value="">Select City</option>
+                        {formData.state && INDIAN_STATES_AND_CITIES[formData.state]?.map(cityName => (
+                          <option key={cityName} value={cityName}>{cityName}</option>
+                        ))}
+                      </select>
+                      {formData.city === 'Other' && (
+                        <input
+                          type="text"
+                          value={customCity}
+                          onChange={(e) => setCustomCity(e.target.value)}
+                          className="w-full mt-2 bg-slate-50 border border-slate-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all font-medium"
+                          placeholder="Enter City"
+                        />
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -603,6 +731,26 @@ export default function OnboardingSetup({ onComplete }) {
                       placeholder="e.g. craft coffee, fresh pastries, friendly staff"
                     />
                     <p className="text-xs text-slate-500 mt-1">We've pre-filled this based on our AI analysis.</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                      Review Language (for AI suggestions)
+                    </label>
+                    <select
+                      value={formData.language}
+                      onChange={(e) => setFormData({ ...formData, language: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all font-medium"
+                    >
+                      <option value="en">English</option>
+                      <option value="hi">Hindi (Romanized)</option>
+                      <option value="or">Odia (Romanized)</option>
+                      <option value="bn">Bengali (Romanized)</option>
+                      <option value="te">Telugu (Romanized)</option>
+                      <option value="ta">Tamil (Romanized)</option>
+                      <option value="mr">Marathi (Romanized)</option>
+                      <option value="gu">Gujarati (Romanized)</option>
+                    </select>
                   </div>
                 </motion.div>
               )}
