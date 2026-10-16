@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Building, Key, Star, BarChart3, MessageSquare, ExternalLink, Settings, Save, CheckCircle2, ShieldAlert, Sparkles, Filter, ChevronRight, Share2, CreditCard, Loader2, RefreshCw } from 'lucide-react';
 import { BUSINESS_CATEGORIES } from './BusinessPresets';
-import { getGoogleAuthUrl } from '../services/apiService';
+import { getGoogleAuthUrl, API_URL } from '../services/apiService';
 
 export default function ClientDashboard({ business, onUpdateBusiness, internalFeedback, googleReviews = [], onResolveFeedback, onUpgrade, onRefresh }) {
   const [activeTab, setActiveTab] = useState('analytics');
@@ -60,7 +60,7 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
     setAnalyzingLink(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5001/api/business/analyze-link', {
+      const res = await fetch(`${API_URL}/business/analyze-link`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -92,7 +92,7 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
     setSyncingUrl(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5001/api/business/sync-url', {
+      const res = await fetch(`${API_URL}/business/sync-url`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

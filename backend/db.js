@@ -38,9 +38,10 @@ async function initTablesMysql(pool) {
       owner_name VARCHAR(255),
       logo_url VARCHAR(1024),
       google_place_id VARCHAR(255),
-      google_review_url VARCHAR(1024),
+      google_review_url TEXT,
       target_keywords TEXT,
       offer_banner VARCHAR(1024),
+      upi_id TEXT,
       total_scans INT DEFAULT 0,
       google_review_count INT DEFAULT 0,
       avg_rating DECIMAL(2,1) DEFAULT 0.0,
@@ -153,6 +154,8 @@ async function initTablesMysql(pool) {
   try { await pool.query("ALTER TABLE businesses ADD COLUMN language VARCHAR(50) DEFAULT 'en'"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN business_details TEXT"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN seo_last_updated TIMESTAMP NULL"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN upi_id TEXT"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses MODIFY COLUMN google_review_url TEXT"); } catch (err) {}
   await pool.query(businessQuery);
   await pool.query(googleReviewsQuery);
   await pool.query(feedbackQuery);
@@ -296,9 +299,17 @@ function initTablesSqlite(database) {
   });
 }
 
+let localDb = null;
+
 async function query(sql, params = []) {
+  // Sanitize all parameters to avoid mysql2 "Bind parameters must not contain undefined" errors
+  const sanitizedParams = params.map(p => (p === undefined ? null : p));
+
   if (!hyperdrive) {
-    throw new Error('Hyperdrive binding is not initialized');
+    if (!localDb) {
+      localDb = require('./db.local');
+    }
+    return localDb.query(sql, sanitizedParams);
   }
 
   if (!initialized) {
@@ -321,7 +332,7 @@ async function query(sql, params = []) {
   const connection = await createConnection();
 
   try {
-    const [rows] = await connection.query(sql, params);
+    const [rows] = await connection.query(sql, sanitizedParams);
     return rows;
   } finally {
     await connection.end();
