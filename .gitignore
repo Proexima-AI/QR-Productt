@@ -9,3 +9,5 @@ memory.md
 .DS_Store
 *.log
 database.sqlite
+.wrangler/
+**/.wrangler/

@@ -320,19 +320,20 @@ initDb();
 
 // Generic query function to abstract SQLite and MySQL differences
 async function query(sql, params = []) {
+  const sanitizedParams = params.map(p => (p === undefined ? null : p));
   if (isMysql) {
-    const [rows] = await db.execute(sql, params);
+    const [rows] = await db.execute(sql, sanitizedParams);
     return rows;
   } else {
     return new Promise((resolve, reject) => {
       // Replace ? with SQLite standard if needed, but sqlite uses ? too
       if (sql.trim().toUpperCase().startsWith('SELECT')) {
-        db.all(sql, params, (err, rows) => {
+        db.all(sql, sanitizedParams, (err, rows) => {
           if (err) reject(err);
           else resolve(rows);
         });
       } else {
-        db.run(sql, params, function (err) {
+        db.run(sql, sanitizedParams, function (err) {
           if (err) reject(err);
           // For INSERT, sqlite returns this.lastID, mysql returns insertId
           else resolve({ insertId: this.lastID, changes: this.changes });

@@ -142,14 +142,50 @@ app.put('/api/business/me', authenticate, async (req, res) => {
 
 // Complete Setup and Activate User
 app.post('/api/business/setup-complete', authenticate, async (req, res) => {
-  const { name, tagline, category, google_review_url, target_keywords, mobile_number, top_selling_items, business_location, ai_analysis_results, language, upi_id } = req.body;
+  const { 
+    name, 
+    tagline, 
+    category, 
+    google_review_url, 
+    target_keywords, 
+    mobile_number, 
+    top_selling_items, 
+    business_location, 
+    ai_analysis_results, 
+    language, 
+    upi_id 
+  } = req.body;
+
   try {
     // 1. Update business
     await query(
       `UPDATE businesses SET 
-        name = ?, tagline = ?, category = ?, google_review_url = ?, target_keywords = ?, mobile_number = ?, top_selling_items = ?, business_location = ?, ai_analysis_results = ?, language = ?, upi_id = ?
+        name = COALESCE(?, name), 
+        tagline = COALESCE(?, tagline), 
+        category = COALESCE(?, category), 
+        google_review_url = ?, 
+        target_keywords = ?, 
+        mobile_number = ?, 
+        top_selling_items = ?, 
+        business_location = ?, 
+        ai_analysis_results = ?, 
+        language = ?, 
+        upi_id = COALESCE(?, upi_id)
       WHERE user_id = ?`,
-      [name, tagline, category, google_review_url, target_keywords, mobile_number, JSON.stringify(top_selling_items || []), business_location, JSON.stringify(ai_analysis_results || {}), language || 'en', upi_id, req.user.id]
+      [
+        name || null, 
+        tagline || null, 
+        category || null, 
+        google_review_url || null, 
+        target_keywords || null, 
+        mobile_number || null, 
+        JSON.stringify(top_selling_items || []), 
+        business_location || null, 
+        JSON.stringify(ai_analysis_results || {}), 
+        language || 'en', 
+        upi_id || null, 
+        req.user.id
+      ]
     );
 
     // 2. Activate user
@@ -159,11 +195,22 @@ app.post('/api/business/setup-complete', authenticate, async (req, res) => {
     const token = jwt.sign({ id: req.user.id, email: req.user.email, status: 'active' }, JWT_SECRET, { expiresIn: '1d' });
 
     const userQuery = await query('SELECT created_at, subscription_ends_at FROM users WHERE id = ?', [req.user.id]);
+    const userRecord = userQuery && userQuery.length > 0 ? userQuery[0] : {};
 
-    res.json({ success: true, token, user: { id: req.user.id, email: req.user.email, status: 'active', created_at: userQuery[0].created_at, subscription_ends_at: userQuery[0].subscription_ends_at } });
+    res.json({ 
+      success: true, 
+      token, 
+      user: { 
+        id: req.user.id, 
+        email: req.user.email, 
+        status: 'active', 
+        created_at: userRecord.created_at || new Date(), 
+        subscription_ends_at: userRecord.subscription_ends_at || null 
+      } 
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Setup Complete Error:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 

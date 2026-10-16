@@ -77,7 +77,7 @@ export default function PaymentGateway({ onPaymentSuccess, trialDaysLeft = 0, is
         key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_Tad3LujJ9TrYKx', // Fallback to provided key
         amount: order.amount,
         currency: order.currency,
-        name: "Proexima AI",
+        name: "Zeriva.si",
         description: `Subscription: ${plan.name} + One-time Setup`,
         order_id: order.id,
         handler: async function (response) {

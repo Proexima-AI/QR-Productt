@@ -3,7 +3,7 @@ import { Building, Tag, Search, Link2, Sparkles, ArrowRight, ArrowLeft, Loader2,
 import { motion, AnimatePresence } from 'framer-motion';
 import { BUSINESS_CATEGORIES } from './BusinessPresets';
 import { INDIAN_STATES_AND_CITIES } from '../utils/indianStates';
-import { completeBusinessSetup, getProductSuggestions, analyzeBusiness, getGoogleAuthUrl } from '../services/apiService';
+import { completeBusinessSetup, getProductSuggestions, analyzeBusiness, getGoogleAuthUrl, API_URL } from '../services/apiService';
 
 export default function OnboardingSetup({ onComplete }) {
   const loadInitialState = () => {
@@ -35,7 +35,8 @@ export default function OnboardingSetup({ onComplete }) {
     ai_analysis_results: {},
     language: 'en',
     state: '',
-    city: ''
+    city: '',
+    google_review_url: ''
   });
 
   const [customCategory, setCustomCategory] = useState(initialState?.customCategory || '');
@@ -94,7 +95,7 @@ export default function OnboardingSetup({ onComplete }) {
         setSearchingPlaces(true);
         try {
           const categoryName = BUSINESS_CATEGORIES.find(c => c.id === formData.category)?.name || formData.category;
-          const res = await fetch('http://localhost:5001/api/business/search-places', {
+          const res = await fetch(`${API_URL}/business/search-places`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -245,7 +246,8 @@ export default function OnboardingSetup({ onComplete }) {
         if (onComplete) onComplete();
       }
     } catch (err) {
-      setError('Failed to complete setup. Please try again.');
+      const serverMsg = err.response?.data?.error || err.message;
+      setError(serverMsg ? `Failed to complete setup: ${serverMsg}` : 'Failed to complete setup. Please try again.');
       console.error(err);
     } finally {
       setLoading(false);
