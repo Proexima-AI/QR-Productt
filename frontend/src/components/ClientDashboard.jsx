@@ -422,7 +422,7 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
           <div className="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200">
             <div>
               <h4 className="font-bold text-slate-900">Enable AI Auto-Reply</h4>
-              <p className="text-xs text-slate-500">Automatically reply to new Google Maps reviews using Gemini AI.</p>
+              <p className="text-xs text-slate-500">Automatically reply to new Google Maps reviews using Lyra AI.</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input 
