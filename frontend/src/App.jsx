@@ -39,8 +39,8 @@ function ProtectedDashboard() {
       const fData = await getMyFeedback();
       const gData = await getGoogleReviews();
       setBusiness(bData);
-      setFeedbacks(fData);
-      setGoogleReviews(gData);
+      setFeedbacks(Array.isArray(fData) ? fData : []);
+      setGoogleReviews(Array.isArray(gData) ? gData : []);
     } catch (err) {
       console.error('Failed to load dashboard data', err);
     } finally {
@@ -165,7 +165,7 @@ function PublicReviewPage() {
     <CustomerReviewPage 
       business={business} 
       onAddInternalFeedback={async (fb) => {
-        await submitFeedback({ ...fb, business_id: business.id });
+        return await submitFeedback({ ...fb, business_id: business.id });
       }} 
     />
   );

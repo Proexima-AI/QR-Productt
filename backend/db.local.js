@@ -33,13 +33,17 @@ async function initDb() {
     console.warn('⚠️ Could not connect to MySQL. Falling back to local SQLite for development.', error.message);
     
     // Fallback to SQLite
-    db = new sqlite3.Database(path.join(__dirname, 'database.sqlite'), (err) => {
-      if (err) {
-        console.error('Error opening SQLite database', err.message);
-      } else {
-        console.log('✅ Connected to local SQLite database.');
-        initTablesSqlite(db);
-      }
+    await new Promise((resolve, reject) => {
+      db = new sqlite3.Database(path.join(__dirname, 'database.sqlite'), (err) => {
+        if (err) {
+          console.error('Error opening SQLite database', err.message);
+          reject(err);
+        } else {
+          console.log('✅ Connected to local SQLite database.');
+          initTablesSqlite(db);
+          resolve();
+        }
+      });
     });
     isMysql = false;
   }
@@ -316,10 +320,13 @@ function initTablesSqlite(database) {
   });
 }
 
-initDb();
+let dbInitPromise = initDb();
 
 // Generic query function to abstract SQLite and MySQL differences
 async function query(sql, params = []) {
+  if (!db) {
+    await dbInitPromise;
+  }
   const sanitizedParams = params.map(p => (p === undefined ? null : p));
   if (isMysql) {
     const [rows] = await db.execute(sql, sanitizedParams);
