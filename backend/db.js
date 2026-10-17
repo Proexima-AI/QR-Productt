@@ -155,7 +155,11 @@ async function initTablesMysql(pool) {
   try { await pool.query("ALTER TABLE businesses ADD COLUMN business_details TEXT"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN seo_last_updated TIMESTAMP NULL"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN upi_id TEXT"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN intercepted_bad_reviews INT DEFAULT 0"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses MODIFY COLUMN google_review_url TEXT"); } catch (err) {}
+  try { await pool.query("ALTER TABLE feedback ADD COLUMN customer_name VARCHAR(255)"); } catch (err) {}
+  try { await pool.query("ALTER TABLE feedback ADD COLUMN customer_contact VARCHAR(255)"); } catch (err) {}
+  try { await pool.query("ALTER TABLE feedback ADD COLUMN chips TEXT"); } catch (err) {}
   await pool.query(businessQuery);
   await pool.query(googleReviewsQuery);
   await pool.query(feedbackQuery);
