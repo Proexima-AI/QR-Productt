@@ -795,6 +795,99 @@ app.get('/api/google/callback', async (req, res) => {
   }
 });
 
+app.get('/api/google/status', authenticate, async (req, res) => {
+  try {
+    const businesses = await query(
+      `SELECT id, google_access_token, google_refresh_token
+       FROM businesses WHERE user_id = ?`,
+      [req.user.id]
+    );
+
+    if (!businesses.length) {
+      return res.status(404).json({
+        connected: false,
+        message: 'Business not found'
+      });
+    }
+
+    const business = businesses[0];
+
+    if (!business.google_refresh_token) {
+      return res.json({
+        connected: false,
+        message: 'Google account is not connected. Please connect again.'
+      });
+    }
+
+    const client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URI
+    );
+
+    client.setCredentials({
+      access_token: business.google_access_token,
+      refresh_token: business.google_refresh_token
+    });
+
+    const { token } = await client.getAccessToken();
+
+    if (!token) {
+      return res.json({
+        connected: false,
+        message: 'Unable to obtain a valid Google access token.'
+      });
+    }
+
+    const response = await fetch(
+      'https://mybusinessaccountmanagement.googleapis.com/v1/accounts',
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Google Business Profile API error:', data);
+
+      return res.status(502).json({
+        connected: false,
+        message: data.error?.message ||
+          'Google API access failed. Check API access and permissions.'
+      });
+    }
+
+    await query(
+      `UPDATE businesses
+       SET google_access_token = ?, google_refresh_token = ?
+       WHERE id = ?`,
+      [
+        client.credentials.access_token || token,
+        client.credentials.refresh_token || business.google_refresh_token,
+        business.id
+      ]
+    );
+
+    res.json({
+      connected: true,
+      message: 'Google Business Profile API connection verified.',
+      accounts: (data.accounts || []).map(account => ({
+        name: account.name,
+        accountName: account.accountName,
+        type: account.type
+      }))
+    });
+  } catch (error) {
+    console.error('Google connection check failed:', error.message);
+
+    res.status(502).json({
+      connected: false,
+      message: 'Could not verify the Google connection.'
+    });
+  }
+});
+
 app.get('/api/google/reviews', authenticate, async (req, res) => {
   try {
     const businesses = await query('SELECT id FROM businesses WHERE user_id = ?', [req.user.id]);
