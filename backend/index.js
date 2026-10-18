@@ -345,22 +345,26 @@ app.post('/api/payment/verify', authenticate, async (req, res) => {
 
 // Submit feedback (Customer)
 app.post('/api/feedback', async (req, res) => {
-  const { business_id, rating, message, customer_name, customer_contact, chips } = req.body;
-  const id = `fb_${Date.now()}`;
-  const date = new Date().toLocaleString();
-  const chipsStr = Array.isArray(chips) ? chips.join(',') : '';
+  const { business_id, rating, message, chips } = req.body;
+  const customer_name = (req.body.customer_name || req.body.customerName || 'Anonymous Customer').toString().trim() || 'Anonymous Customer';
+  const customer_contact = (req.body.customer_contact || req.body.customerContact || 'N/A').toString().trim() || 'N/A';
+  const id = req.body.id || `fb_${Date.now()}`;
+  const date = req.body.date || new Date().toLocaleString();
+  const chipsStr = Array.isArray(chips) ? chips.join(',') : (chips || '');
+  const ratingNum = Math.max(1, Math.min(5, Number(rating) || 1));
+  const safeMessage = message && message.toString().trim() ? message.toString().trim() : 'Customer left feedback without comments.';
 
   try {
     await query(
       `INSERT INTO feedback (id, business_id, rating, message, customer_name, customer_contact, date, chips) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, business_id, rating, message, customer_name, customer_contact, date, chipsStr]
+      [id, business_id, ratingNum, safeMessage, customer_name, customer_contact, date, chipsStr]
     );
     // Update intercepted stats
     await query('UPDATE businesses SET intercepted_bad_reviews = intercepted_bad_reviews + 1 WHERE id = ?', [business_id]);
-    res.json({ success: true });
+    res.json({ success: true, id });
   } catch (error) {
-    console.error(error);
+    console.error('Feedback submission error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -371,15 +375,30 @@ app.get('/api/feedback/me', authenticate, async (req, res) => {
     const businesses = await query('SELECT id FROM businesses WHERE user_id = ?', [req.user.id]);
     if (businesses.length === 0) return res.json([]);
 
-    const feedback = await query('SELECT * FROM feedback WHERE business_id = ? ORDER BY id DESC', [businesses[0].id]);
-    // Format chips back to array
-    const formatted = feedback.map(fb => ({
-      ...fb,
-      chips: fb.chips ? fb.chips.split(',') : []
-    }));
+    const bizIds = businesses.map(b => b.id);
+    const placeholders = bizIds.map(() => '?').join(',');
+    const feedback = await query(
+      `SELECT * FROM feedback WHERE business_id IN (${placeholders}) ORDER BY id DESC`,
+      bizIds
+    );
+
+    // Format feedback with both camelCase and snake_case for robust frontend compatibility
+    const formatted = feedback.map(fb => {
+      const name = fb.customer_name || fb.customerName || 'Anonymous Customer';
+      const contact = fb.customer_contact || fb.customerContact || 'N/A';
+      return {
+        ...fb,
+        customerName: name,
+        customerContact: contact,
+        customer_name: name,
+        customer_contact: contact,
+        rating: Math.max(1, Math.min(5, Number(fb.rating) || 1)),
+        chips: fb.chips ? (Array.isArray(fb.chips) ? fb.chips : fb.chips.split(',').map(c => c.trim()).filter(Boolean)) : []
+      };
+    });
     res.json(formatted);
   } catch (error) {
-    console.error(error);
+    console.error('Fetch feedback error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -402,7 +421,47 @@ app.put('/api/feedback/:id/resolve', authenticate, async (req, res) => {
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 app.post('/api/generate-review', async (req, res) => {
-  const { businessName, category, rating, topics, instructions, language } = req.body;
+  const { businessName, category, rating, topics, instructions, language, location, city, business_id } = req.body;
+  const ratingNum = Math.max(1, Math.min(5, Number(rating) || 5));
+  const isPositive = ratingNum >= 4;
+
+  let effectiveLocation = (city || location || '').trim();
+
+  // If business_id is passed, attempt to retrieve or auto-populate business_location
+  if (business_id) {
+    try {
+      const bizRows = await query('SELECT business_location, target_keywords FROM businesses WHERE id = ?', [business_id]);
+      if (bizRows.length > 0) {
+        const biz = bizRows[0];
+        if (!effectiveLocation && biz.business_location && biz.business_location.trim()) {
+          effectiveLocation = biz.business_location.trim();
+        }
+
+        // If GPS detected a valid location and business location is empty, auto-update the business profile!
+        if (effectiveLocation) {
+          if (!biz.business_location || !biz.business_location.trim()) {
+            await query('UPDATE businesses SET business_location = ? WHERE id = ?', [effectiveLocation, business_id]);
+          }
+          // If target_keywords has [Your City], replace it permanently in DB with the actual city
+          if (biz.target_keywords && /\[(?:Your\s*)?(?:City|Location|Area)\]/i.test(biz.target_keywords)) {
+            const updatedKeywords = biz.target_keywords.replace(/\[(?:Your\s*)?(?:City|Location|Area)\]/gi, effectiveLocation);
+            await query('UPDATE businesses SET target_keywords = ? WHERE id = ?', [updatedKeywords, business_id]);
+          }
+        }
+      }
+    } catch (dbErr) {
+      console.warn('Could not auto-sync business location:', dbErr.message);
+    }
+  }
+
+  // Sanitize instructions and topics: replace or remove any [Your City] brackets
+  let cleanInstructions = (instructions || '');
+  if (effectiveLocation) {
+    cleanInstructions = cleanInstructions.replace(/\[(?:Your\s*)?(?:City|Location|Area)\]/gi, effectiveLocation);
+  } else {
+    cleanInstructions = cleanInstructions.replace(/\s*(?:in|at|around)?\s*\[(?:Your\s*)?(?:City|Location|Area)\]/gi, '');
+  }
+
   try {
     const langMap = {
       en: 'English',
@@ -420,31 +479,68 @@ app.post('/api/generate-review', async (req, res) => {
       ? `\n      CRITICAL: Write the review words in ${fullLang} language, BUT use ONLY the English alphabet (Romanized/transliterated script). For example, if the language is Hindi, you must output 'Bahut badhiya' instead of 'बहुत बढ़िया'. DO NOT use any native script.`
       : '';
 
-    const prompt = `
-      You are an expert copywriter acting as a highly satisfied customer writing a Google review.
-      Business Name: ${businessName}
-      Category: ${category}
-      Star Rating: ${rating}/5
-      Topics mentioned: ${topics ? topics.join(', ') : 'None'}
-      Special Instructions: ${instructions || 'None'}
-      ${languageInstruction}
+    const locationContext = effectiveLocation 
+      ? `Location Context: The business is located in "${effectiveLocation}". Weave this city/location naturally into the review text.` 
+      : `Location Context: No specific city provided. Do NOT output any bracketed placeholders like [Your City] or [City].`;
 
-      Write a glowing, authentic-sounding ${rating}-star Google review for this business. 
-      Keep it between 2 to 4 sentences. It should sound human, genuine, and specifically mention the topics if provided.
-      The review must be highly SEO friendly and use relevant keywords naturally.
-      Do not include quotes or surrounding conversational text. Just the review itself.
-    `;
+    const prompt = isPositive
+      ? `
+        You are an expert copywriter acting as a highly satisfied customer writing a Google review.
+        Business Name: ${businessName}
+        Category: ${category}
+        Star Rating: ${ratingNum}/5
+        ${locationContext}
+        Topics mentioned: ${topics && topics.length ? topics.join(', ') : 'None'}
+        Special Instructions: ${cleanInstructions || 'None'}
+        ${languageInstruction}
+
+        Write a glowing, authentic-sounding ${ratingNum}-star Google review for this business. 
+        Keep it between 2 to 4 sentences. It should sound human, genuine, and specifically mention the topics if provided.
+        The review must be highly SEO friendly and use relevant keywords naturally.
+        CRITICAL RULE: NEVER use bracketed placeholders like [Your City], [City], [Location], [Your Area], etc. Under NO circumstances should square brackets [] appear in your output. If a city is provided, use it naturally. If not, write the review without mentioning any location.
+        Do not include quotes or surrounding conversational text. Just the review itself.
+      `
+      : `
+        You are a customer writing private, constructive feedback directly to the owner/manager of this business.
+        Business Name: ${businessName}
+        Category: ${category}
+        Star Rating: ${ratingNum}/5
+        ${locationContext}
+        Areas for improvement/Topics mentioned: ${topics && topics.length ? topics.join(', ') : 'Overall visit experience'}
+        Special Instructions: ${cleanInstructions || 'Constructive, respectful, actionable'}
+        ${languageInstruction}
+
+        Write a constructive, respectful ${ratingNum}-star private feedback explaining what could be improved.
+        Keep it concise (2 to 3 sentences). Do not be overly harsh or rude, but be honest and clear about expectations.
+        CRITICAL RULE: NEVER use bracketed placeholders like [Your City], [City], [Location], [Your Area], etc. Under NO circumstances should square brackets [] appear in your output.
+        Do not include quotes or surrounding conversational text. Just the feedback itself.
+      `;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }]
     });
 
-    res.json({ review: response.choices[0].message.content });
+    let reviewText = response.choices[0].message.content.trim();
+
+    // Strict post-processing guarantee: replace or strip any residual brackets or placeholder patterns
+    if (effectiveLocation) {
+      reviewText = reviewText.replace(/\[(?:Your\s*)?(?:City|Location|Area)\]/gi, effectiveLocation);
+    } else {
+      reviewText = reviewText.replace(/\s*(?:in|at|around)?\s*\[(?:Your\s*)?(?:City|Location|Area)\]/gi, '');
+    }
+    reviewText = reviewText.replace(/\[.*?\]/g, '').replace(/\s{2,}/g, ' ').trim();
+
+    res.json({ review: reviewText, location: effectiveLocation });
   } catch (error) {
     console.error('AI Generation Error:', error);
+    const locSnippet = effectiveLocation ? ` in ${effectiveLocation}` : '';
     // Fallback if AI fails (e.g. rate limit)
-    res.json({ review: `I had a fantastic experience at ${businessName}! Highly recommended for anyone looking for a great ${category}.` });
+    if (ratingNum >= 4) {
+      res.json({ review: `I had a fantastic experience at ${businessName}${locSnippet}! Highly recommended for anyone looking for great ${category || 'service'}.` });
+    } else {
+      res.json({ review: `I visited ${businessName}${locSnippet} recently. While there are good aspects, the service and experience had a few areas that need attention to meet expectations.` });
+    }
   }
 });
 

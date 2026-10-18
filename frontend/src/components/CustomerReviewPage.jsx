@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Sparkles, Copy, ExternalLink, Send, ShieldCheck, CheckCircle2, MessageSquareHeart, RefreshCw, AlertTriangle, QrCode } from 'lucide-react';
+import { Star, Sparkles, Copy, ExternalLink, Send, ShieldCheck, CheckCircle2, MessageSquareHeart, RefreshCw, AlertTriangle, QrCode, Loader2, MapPin } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { QRCodeSVG } from 'qrcode.react';
 import { generateReviewBackend, recordScan, recordGoogleReview } from '../services/apiService';
@@ -16,7 +16,13 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
   const [customerName, setCustomerName] = useState('');
   const [customerContact, setCustomerContact] = useState('');
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackError, setFeedbackError] = useState(null);
   const [showPayment, setShowPayment] = useState(false);
+
+  // GPS Location state
+  const [detectedLocation, setDetectedLocation] = useState(business?.business_location || '');
+  const [isLocating, setIsLocating] = useState(false);
 
   // Find category details
   const categoryObj = BUSINESS_CATEGORIES.find(c => c.id === business.category) || BUSINESS_CATEGORIES.find(c => c.id === 'others') || BUSINESS_CATEGORIES[0];
@@ -31,19 +37,75 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
     }
   };
 
-  // Auto-generate AI review when rating, chips, or tone change
+  // Auto-detect GPS Location on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && navigator.geolocation) {
+      setIsLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            const res = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+            );
+            if (res.ok) {
+              const data = await res.json();
+              const cityFound = data.city || data.locality || data.principalSubdivision || '';
+              if (cityFound) {
+                setDetectedLocation(cityFound);
+              }
+            }
+          } catch (err) {
+            console.warn('Geolocation reverse geocoding error:', err);
+          } finally {
+            setIsLocating(false);
+          }
+        },
+        (error) => {
+          console.warn('Geolocation access not granted or unavailable:', error.message);
+          setIsLocating(false);
+        },
+        { timeout: 8000, maximumAge: 300000, enableHighAccuracy: false }
+      );
+    }
+  }, []);
+
+  // Auto-generate AI review when rating, chips, tone, or detected location change
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
+      const activeLoc = detectedLocation || business?.business_location || '';
+
+      // Clean target keywords: replace any literal [Your City] with detected city or strip it cleanly
+      let cleanKeywords = (business?.target_keywords || '');
+      if (activeLoc) {
+        cleanKeywords = cleanKeywords.replace(/\[(?:Your\s*)?(?:City|Location|Area)\]/gi, activeLoc);
+      } else {
+        cleanKeywords = cleanKeywords.replace(/\s*(?:in|at|around)?\s*\[(?:Your\s*)?(?:City|Location|Area)\]/gi, '');
+      }
+
       const result = await generateReviewBackend({
         businessName: business.name,
         category: business.category,
         rating,
         topics: selectedChips,
-        instructions: tone + ' tone. Keywords: ' + (business.target_keywords || ''),
-        language: business.language
+        instructions: tone + ' tone. Keywords: ' + cleanKeywords,
+        language: business.language,
+        location: activeLoc,
+        city: activeLoc,
+        business_id: business.id
       });
-      setReviewText(result);
+
+      // Extra client-side safety guarantee: ensure no bracketed placeholders remain in the review
+      let sanitizedResult = (result || '');
+      if (activeLoc) {
+        sanitizedResult = sanitizedResult.replace(/\[(?:Your\s*)?(?:City|Location|Area)\]/gi, activeLoc);
+      } else {
+        sanitizedResult = sanitizedResult.replace(/\s*(?:in|at|around)?\s*\[(?:Your\s*)?(?:City|Location|Area)\]/gi, '');
+      }
+      sanitizedResult = sanitizedResult.replace(/\[.*?\]/g, '').replace(/\s{2,}/g, ' ').trim();
+
+      setReviewText(sanitizedResult);
     } catch (err) {
       console.error(err);
     } finally {
@@ -53,7 +115,7 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
 
   useEffect(() => {
     handleGenerate();
-  }, [rating, selectedChips, tone]);
+  }, [rating, selectedChips, tone, detectedLocation]);
 
   // Record scan on mount
   useEffect(() => {
@@ -104,23 +166,40 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
   };
 
   // Handle Private 1-3 star feedback submission
-  const handleSubmitPrivateFeedback = (e) => {
+  const handleSubmitPrivateFeedback = async (e) => {
     e.preventDefault();
+    setIsSubmittingFeedback(true);
+    setFeedbackError(null);
+
+    const safeMessage = reviewText && reviewText.trim() ? reviewText.trim() : 'Customer left feedback without comments.';
+    const finalCustomerName = customerName && customerName.trim() ? customerName.trim() : 'Anonymous Customer';
+    const finalCustomerContact = customerContact && customerContact.trim() ? customerContact.trim() : 'N/A';
+
     const newFeedback = {
       id: `fb_${Date.now()}`,
+      business_id: business?.id,
       date: new Date().toLocaleString(),
       rating,
-      customerName: customerName || 'Anonymous Customer',
-      customerContact: customerContact || 'N/A',
+      customerName: finalCustomerName,
+      customerContact: finalCustomerContact,
+      customer_name: finalCustomerName,
+      customer_contact: finalCustomerContact,
       chips: selectedChips,
-      message: reviewText,
+      message: safeMessage,
       status: 'Unresolved'
     };
 
-    if (onAddInternalFeedback) {
-      onAddInternalFeedback(newFeedback);
+    try {
+      if (onAddInternalFeedback) {
+        await onAddInternalFeedback(newFeedback);
+      }
+      setFeedbackSubmitted(true);
+    } catch (err) {
+      console.error('Failed to submit private feedback:', err);
+      setFeedbackError('Could not send feedback. Please try again.');
+    } finally {
+      setIsSubmittingFeedback(false);
     }
-    setFeedbackSubmitted(true);
   };
 
   if (showPayment) {
@@ -202,6 +281,13 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
 
           <h1 className="text-xl font-bold text-white tracking-tight">{business.name}</h1>
           <p className="text-xs text-slate-400 mt-1">{business.tagline}</p>
+
+          {(detectedLocation || isLocating) && (
+            <div className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-300 bg-slate-800/80 border border-slate-700/60 px-3 py-1 rounded-full shadow-sm">
+              <MapPin className="w-3 h-3 text-rose-400 shrink-0" />
+              <span>{isLocating && !detectedLocation ? 'Detecting your city...' : detectedLocation}</span>
+            </div>
+          )}
 
           {business.offer_banner && (
             <div className="mt-3 text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl py-1.5 px-3 font-medium animate-pulse">
@@ -394,12 +480,28 @@ export default function CustomerReviewPage({ business, onAddInternalFeedback }) 
                     />
                   </div>
 
+                  {feedbackError && (
+                    <div className="p-2.5 bg-rose-500/20 border border-rose-500/40 rounded-xl text-center text-xs text-rose-300">
+                      {feedbackError}
+                    </div>
+                  )}
+
                   <button
                     type="submit"
-                    className="w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 font-semibold text-xs border border-amber-500/30 shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+                    disabled={isSubmittingFeedback}
+                    className="w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 font-semibold text-xs border border-amber-500/30 shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Send className="w-4 h-4" />
-                    <span>Send Private Feedback to Owner</span>
+                    {isSubmittingFeedback ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                        <span>Sending Feedback to Owner...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        <span>Send Private Feedback to Owner</span>
+                      </>
+                    )}
                   </button>
                 </form>
               )}

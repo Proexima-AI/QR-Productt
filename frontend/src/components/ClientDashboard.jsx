@@ -3,7 +3,7 @@ import { Building, Key, Star, BarChart3, MessageSquare, ExternalLink, Settings, 
 import { BUSINESS_CATEGORIES } from './BusinessPresets';
 import { getGoogleAuthUrl, API_URL } from '../services/apiService';
 
-export default function ClientDashboard({ business, onUpdateBusiness, internalFeedback, googleReviews = [], onResolveFeedback, onUpgrade, onRefresh }) {
+export default function ClientDashboard({ business, onUpdateBusiness, internalFeedback = [], googleReviews = [], onResolveFeedback, onUpgrade, onRefresh }) {
   const [activeTab, setActiveTab] = useState('analytics');
   
   const isCustomCategory = business.category && !BUSINESS_CATEGORIES.find(c => c.id === business.category);
@@ -114,9 +114,10 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
     setSyncingUrl(false);
   };
 
-  const filteredFeedback = internalFeedback.filter(fb => {
+  const feedbackList = Array.isArray(internalFeedback) ? internalFeedback : [];
+  const filteredFeedback = feedbackList.filter(fb => {
     if (filterRating === 'all') return true;
-    return fb.rating === Number(filterRating);
+    return Number(fb.rating) === Number(filterRating);
   });
 
   return (
@@ -172,9 +173,9 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
             <div className="flex items-center gap-3">
               <MessageSquare className="w-5 h-5" /> Inbox
             </div>
-            {internalFeedback.length > 0 && (
+            {feedbackList.length > 0 && (
               <span className="bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black shadow-sm">
-                {internalFeedback.length}
+                {feedbackList.length}
               </span>
             )}
           </button>
@@ -249,13 +250,22 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+            <div 
+              onClick={() => setActiveTab('feedback')}
+              className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md hover:border-rose-200 transition-all cursor-pointer"
+              title="Click to view intercepted 1-3 star feedback in Inbox"
+            >
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                 <ShieldAlert className="w-16 h-16 text-rose-500" />
               </div>
-              <span className="text-sm text-slate-500 font-bold uppercase tracking-wider block mb-2 relative z-10">Low-Stars Blocked</span>
+              <div className="flex items-center justify-between mb-2 relative z-10">
+                <span className="text-sm text-slate-500 font-bold uppercase tracking-wider block">Low-Stars Blocked</span>
+                <span className="text-xs font-bold text-rose-600 flex items-center gap-1 group-hover:underline">
+                  View Inbox <ChevronRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
               <div className="text-4xl font-black text-slate-900 relative z-10 flex items-center gap-3">
-                {business.intercepted_bad_reviews}
+                {business.intercepted_bad_reviews || feedbackList.length || 0}
                 <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-md border border-rose-100">
                   Reputation Safe
                 </span>
@@ -285,6 +295,78 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
               View Google Profile <ExternalLink className="w-4 h-4" />
             </a>
           </div>
+
+          {/* Quick Preview of Intercepted Reviews on Overview Tab */}
+          {feedbackList.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+                    <ShieldAlert className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-slate-900">Intercepted Customer Feedback (1-3 Stars)</h4>
+                    <p className="text-xs text-slate-500">Reviews saved internally to protect your Google rating</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveTab('feedback')}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-2 rounded-xl transition-colors self-start sm:self-auto"
+                >
+                  View All in Inbox ({feedbackList.length}) <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {feedbackList.slice(0, 2).map((fb) => {
+                  const customerName = fb.customerName || fb.customer_name || 'Anonymous Customer';
+                  const customerContact = fb.customerContact || fb.customer_contact || 'N/A';
+                  const initial = (customerName.trim().charAt(0) || 'A').toUpperCase();
+                  const ratingStars = Math.max(1, Math.min(5, Number(fb.rating) || 1));
+
+                  return (
+                    <div key={fb.id} className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-4 space-y-3 hover:border-slate-300 transition-colors">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">
+                            {initial}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-slate-900 block truncate">{customerName}</span>
+                            <span className="text-[10px] text-slate-400 truncate block">{customerContact}</span>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-amber-400 text-xs tracking-wider">{'★'.repeat(ratingStars)}</div>
+                          <span className="text-[10px] text-slate-400">{fb.date}</span>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-slate-700 bg-white p-3 rounded-lg border border-slate-100 italic line-clamp-2">
+                        "{fb.message}"
+                      </p>
+
+                      <div className="flex items-center justify-between pt-1 text-xs">
+                        <span className={`font-bold text-[11px] px-2 py-0.5 rounded-md ${
+                          fb.status === 'Resolved' 
+                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
+                            : 'bg-amber-50 text-amber-600 border border-amber-100'
+                        }`}>
+                          ● {fb.status || 'Unresolved'}
+                        </span>
+                        <button
+                          onClick={() => setActiveTab('feedback')}
+                          className="font-bold text-indigo-600 hover:text-indigo-800 text-xs flex items-center gap-1"
+                        >
+                          Resolve in Inbox <ChevronRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -311,64 +393,74 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
                 onChange={(e) => setFilterRating(e.target.value)}
                 className="bg-slate-50 border border-slate-200 rounded-lg text-slate-900 px-3 py-1.5 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               >
-                <option value="all">All Stars</option>
-                <option value="1">1 Star</option>
-                <option value="2">2 Stars</option>
-                <option value="3">3 Stars</option>
+                <option value="all">All Stars ({feedbackList.length})</option>
+                <option value="1">1 Star ({feedbackList.filter(f => Number(f.rating) === 1).length})</option>
+                <option value="2">2 Stars ({feedbackList.filter(f => Number(f.rating) === 2).length})</option>
+                <option value="3">3 Stars ({feedbackList.filter(f => Number(f.rating) === 3).length})</option>
               </select>
             </div>
           </div>
 
           {filteredFeedback.length === 0 ? (
             <div className="text-center py-16 bg-slate-50 rounded-xl border border-slate-100 text-slate-500 font-medium text-sm">
-              No unresolved customer complaints! Your satisfaction is running high. 🎉
+              No customer complaints found for this filter! Your satisfaction is running high. 🎉
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredFeedback.map((fb) => (
-                <div key={fb.id} className="bg-white border border-slate-200 shadow-sm rounded-xl p-5 space-y-4 hover:border-indigo-200 transition-colors">
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">
-                        {fb.customerName.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-900">{fb.customerName}</span>
-                          <span className="text-xs text-slate-400 font-medium">{fb.customerContact}</span>
+              {filteredFeedback.map((fb) => {
+                const customerName = fb.customerName || fb.customer_name || 'Anonymous Customer';
+                const customerContact = fb.customerContact || fb.customer_contact || 'N/A';
+                const initial = (customerName.trim().charAt(0) || 'A').toUpperCase();
+                const ratingStars = Math.max(1, Math.min(5, Number(fb.rating) || 1));
+                const chipsList = Array.isArray(fb.chips) 
+                  ? fb.chips 
+                  : (fb.chips ? fb.chips.split(',').map(c => c.trim()).filter(Boolean) : []);
+
+                return (
+                  <div key={fb.id} className="bg-white border border-slate-200 shadow-sm rounded-xl p-5 space-y-4 hover:border-indigo-200 transition-colors">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">
+                          {initial}
                         </div>
-                        <div className="text-amber-400 text-xs tracking-widest mt-0.5">{'★'.repeat(fb.rating)}</div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-slate-900">{customerName}</span>
+                            <span className="text-xs text-slate-400 font-medium">{customerContact}</span>
+                          </div>
+                          <div className="text-amber-400 text-xs tracking-widest mt-0.5">{'★'.repeat(ratingStars)}</div>
+                        </div>
                       </div>
-                    </div>
-                    <span className="text-xs text-slate-400 font-medium">{fb.date}</span>
-                  </div>
-
-                  <p className="text-sm text-slate-700 bg-slate-50/50 p-4 rounded-xl font-medium leading-relaxed border border-slate-100">
-                    "{fb.message}"
-                  </p>
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-50">
-                    <div className="flex gap-2">
-                      {fb.chips && fb.chips.map(chip => (
-                         <span key={chip} className="text-[10px] font-bold uppercase tracking-wide bg-rose-50 text-rose-600 px-2.5 py-1 rounded-md border border-rose-100">
-                           {chip}
-                         </span>
-                      ))}
+                      <span className="text-xs text-slate-400 font-medium">{fb.date}</span>
                     </div>
 
-                    <button
-                      onClick={() => onResolveFeedback(fb.id)}
-                      className={`text-xs px-4 py-2 rounded-lg font-bold transition-all ${
-                        fb.status === 'Resolved'
-                          ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                          : 'bg-slate-900 hover:bg-slate-800 text-white shadow-sm'
-                      }`}
-                    >
-                      {fb.status === 'Resolved' ? '✓ Resolved' : 'Mark as Resolved'}
-                    </button>
+                    <p className="text-sm text-slate-700 bg-slate-50/50 p-4 rounded-xl font-medium leading-relaxed border border-slate-100">
+                      "{fb.message}"
+                    </p>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-50">
+                      <div className="flex flex-wrap gap-2">
+                        {chipsList.map(chip => (
+                           <span key={chip} className="text-[10px] font-bold uppercase tracking-wide bg-rose-50 text-rose-600 px-2.5 py-1 rounded-md border border-rose-100">
+                             {chip}
+                           </span>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => onResolveFeedback(fb.id)}
+                        className={`text-xs px-4 py-2 rounded-lg font-bold transition-all ${
+                          fb.status === 'Resolved'
+                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                            : 'bg-slate-900 hover:bg-slate-800 text-white shadow-sm'
+                        }`}
+                      >
+                        {fb.status === 'Resolved' ? '✓ Resolved' : 'Mark as Resolved'}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -620,7 +712,7 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-sm"
               />
               <p className="text-xs text-slate-500 mt-2 font-medium">
-                The Gemini AI will seamlessly integrate these SEO keywords when drafting positive 5-star reviews for your customers.
+                Lyra AI will seamlessly integrate these SEO keywords when drafting positive 5-star reviews for your customers.
               </p>
             </div>
 
