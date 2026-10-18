@@ -690,10 +690,12 @@ app.get('/api/google/callback', async (req, res) => {
     );
 
     // Redirect back to frontend dashboard
-    res.redirect('http://localhost:5173/dashboard?google=success');
+    // res.redirect('http://localhost:5173/dashboard?google=success');
+    res.redirect('https://qr-productt.pages.dev/dashboard?google=success');
   } catch (error) {
     console.error('OAuth callback error:', error);
-    res.redirect('http://localhost:5173/dashboard?google=error');
+    // res.redirect('http://localhost:5173/dashboard?google=error');
+    res.redirect('https://qr-productt.pages.dev/dashboard?google=error');
   }
 });
 
