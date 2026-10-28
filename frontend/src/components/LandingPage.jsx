@@ -392,12 +392,12 @@ export default function LandingPage() {
               <div className="flex flex-col w-full">
 
                 {/* Row 1 */}
-                <div onClick={() => window.location.href = 'mailto:info@jeriva.si'} className="group flex items-center justify-between py-4 border-b border-slate-100 hover:border-indigo-100 transition-colors cursor-pointer">
+                <div onClick={() => window.location.href = 'mailto:info@zeriva.si'} className="group flex items-center justify-between py-4 border-b border-slate-100 hover:border-indigo-100 transition-colors cursor-pointer">
                   <div className="flex items-center gap-8">
                     <span className="text-indigo-500 font-bold text-sm w-6 tracking-wider">01</span>
                     <div className="flex flex-col gap-0.5">
                       <span className="text-slate-900 font-bold text-[1.1rem]">Email Us</span>
-                      <span className="text-slate-500 text-sm">info@jeriva.si</span>
+                      <span className="text-slate-500 text-sm">info@zeriva.si</span>
                     </div>
                   </div>
                   <button className="w-10 h-10 rounded-full border border-indigo-100 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-all duration-300 shadow-sm shrink-0">
@@ -478,7 +478,7 @@ export default function LandingPage() {
               <li><button onClick={() => scrollToSection('about')} className="hover:text-white transition-colors">About Us</button></li>
               <li><button onClick={() => navigate('/contact')} className="hover:text-white transition-colors">Contact</button></li>
               <li><button onClick={() => navigate('/privacy')} className="hover:text-white transition-colors">Privacy Policy</button></li>
-              <li><button className="hover:text-white transition-colors">Terms of Service</button></li>
+              <li><button onClick={() => navigate('/terms')} className="hover:text-white transition-colors">Terms of Service</button></li>
             </ul>
           </div>
 
@@ -493,8 +493,12 @@ export default function LandingPage() {
         </div>
 
         <div className="max-w-7xl mx-auto px-6 border-t border-[#F5F7F1]/10 pt-8 flex flex-col md:flex-row items-center justify-between text-xs">
-          <p>&copy; 2026 ReviewBoost. All rights reserved.</p>
-          <p className="mt-2 md:mt-0">Built for Local Business Growth.</p>
+          <p>
+            &copy; 2026 ReviewBoost. All rights reserved. •{' '}
+            <button onClick={() => navigate('/privacy')} className="hover:text-white underline transition-colors">Privacy Policy</button> •{' '}
+            <button onClick={() => navigate('/terms')} className="hover:text-white underline transition-colors">Terms of Service</button>
+          </p>
+          <p className="mt-2 md:mt-0">Built for Local Business Growth • Google API Compliant.</p>
         </div>
       </footer>
     </div>

@@ -12,6 +12,7 @@ import SuperAdminDashboard from './components/SuperAdminDashboard';
 import ChatbotWidget from './components/ChatbotWidget';
 import ContactUs from './components/ContactUs';
 import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsAndConditions from './components/TermsAndConditions';
 import { getMyBusiness, getMyFeedback, getBusinessById, submitFeedback, resolveFeedback, updateMyBusiness, getGoogleReviews } from './services/apiService';
 import { ShieldCheck, Clock } from 'lucide-react';
 
@@ -186,6 +187,9 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/contact" element={<ContactUs />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsAndConditions />} />
+        <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+        <Route path="/terms-of-service" element={<TermsAndConditions />} />
         <Route path="/admin" element={
           <ProtectedRoute>
             <SuperAdminDashboard />

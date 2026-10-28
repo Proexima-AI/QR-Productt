@@ -114,6 +114,12 @@ export function Signup() {
             <button disabled={loading} type="submit" className="w-full mt-4 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50">
               {loading ? 'Creating Account...' : 'Start Free Trial'} <ChevronRight className="w-4 h-4" />
             </button>
+            <p className="text-center text-[11px] text-slate-500 mt-3 leading-relaxed">
+              By starting a trial, you agree to our{' '}
+              <span onClick={() => navigate('/terms')} className="text-amber-400 hover:underline cursor-pointer">Terms of Service</span>
+              {' '}and{' '}
+              <span onClick={() => navigate('/privacy')} className="text-amber-400 hover:underline cursor-pointer">Privacy Policy</span>.
+            </p>
             <p className="text-center text-xs text-slate-500 mt-4">Already have an account? <span onClick={() => navigate('/login')} className="text-amber-500 cursor-pointer">Login</span></p>
           </form>
       </div>
