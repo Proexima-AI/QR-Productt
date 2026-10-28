@@ -202,47 +202,35 @@ async function initTablesMysql(pool) {
   console.log('✅ MySQL tables initialized.');
 }
 
-let localDb = null;
-
 async function query(sql, params = []) {
   // Sanitize all parameters to avoid mysql2 "Bind parameters must not contain undefined" errors
   const sanitizedParams = params.map(p => (p === undefined ? null : p));
 
-  const isServer = Boolean(hyperdrive || process.env.NODE_ENV === 'production' || process.env.DB_HOST);
+  if (!initialized) {
+    if (!initializing) {
+      initializing = (async () => {
+        const connection = await createConnection();
 
-  if (isServer) {
-    if (!initialized) {
-      if (!initializing) {
-        initializing = (async () => {
-          const connection = await createConnection();
-
-          try {
-            await initTablesMysql(connection);
-            initialized = true;
-          } finally {
-            await connection.end();
-          }
-        })();
-      }
-
-      await initializing;
+        try {
+          await initTablesMysql(connection);
+          initialized = true;
+        } finally {
+          await connection.end();
+        }
+      })();
     }
 
-    const connection = await createConnection();
-
-    try {
-      const [rows] = await connection.query(sql, sanitizedParams);
-      return rows;
-    } finally {
-      await connection.end();
-    }
+    await initializing;
   }
 
-  // Local development fallback
-  if (!localDb) {
-    localDb = require('./db.local');
+  const connection = await createConnection();
+
+  try {
+    const [rows] = await connection.query(sql, sanitizedParams);
+    return rows;
+  } finally {
+    await connection.end();
   }
-  return localDb.query(sql, sanitizedParams);
 }
 
 function setHyperdrive(binding) {

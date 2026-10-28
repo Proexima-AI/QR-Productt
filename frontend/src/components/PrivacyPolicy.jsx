@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 const PrivacyPolicy = () => {
   return (
@@ -11,9 +12,19 @@ const PrivacyPolicy = () => {
       >
         <div className="bg-indigo-600 p-8 text-white relative overflow-hidden shrink-0">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2"></div>
-          <div className="relative z-10">
-            <h1 className="text-3xl font-bold mb-2">Privacy Policy</h1>
-            <p className="text-indigo-100">Last updated: September 16, 2026</p>
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Privacy Policy</h1>
+              <p className="text-indigo-100">Last updated: October 28, 2026</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link 
+                to="/terms" 
+                className="px-3.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-semibold backdrop-blur-md transition-all"
+              >
+                View Terms of Service &rarr;
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -70,17 +81,22 @@ const PrivacyPolicy = () => {
 
           <h2 className="text-xl font-bold text-slate-800 mb-4 mt-6">7. Contact Us</h2>
           <p className="text-slate-600 mb-4">
-            If you have any questions or concerns about this Privacy Policy, please contact us at <strong>debugdetective.codes@gmail.com</strong>.
+            If you have any questions or concerns about this Privacy Policy or our Google API data practices, please contact us at <a href="mailto:info@zeriva.si" className="text-indigo-600 font-bold hover:underline">info@zeriva.si</a>.
           </p>
         </div>
         
-        <div className="bg-slate-50 p-6 border-t border-slate-100 text-center">
+        <div className="bg-slate-50 p-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
           <button 
             onClick={() => window.history.back()} 
             className="text-slate-500 hover:text-slate-800 font-medium transition-colors"
           >
             ← Back to Application
           </button>
+          <div className="flex items-center gap-4 text-slate-400">
+            <Link to="/terms" className="hover:text-indigo-600 transition-colors font-medium">Terms of Service</Link>
+            <span>•</span>
+            <Link to="/" className="hover:text-indigo-600 transition-colors font-medium">Home</Link>
+          </div>
         </div>
       </motion.div>
     </div>

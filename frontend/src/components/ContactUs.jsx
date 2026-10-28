@@ -105,7 +105,7 @@ export default function ContactUs() {
                 </div>
                 <div>
                   <h4 className="text-[#0B1A30] font-semibold mb-1">Email Us</h4>
-                  <a href="mailto:info@jeriva.si" className="text-slate-500 hover:text-blue-600 transition-colors">info@jeriva.si</a>
+                  <a href="mailto:info@zeriva.si" className="text-slate-500 hover:text-blue-600 transition-colors">info@zeriva.si</a>
                 </div>
               </div>
 
