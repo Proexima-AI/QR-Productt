@@ -1,16 +1,28 @@
 import React, { useState } from 'react';
-import { Building, Key, Star, BarChart3, MessageSquare, ExternalLink, Settings, Save, CheckCircle2, ShieldAlert, Sparkles, Filter, ChevronRight, Share2, CreditCard, Loader2, RefreshCw } from 'lucide-react';
-import { BUSINESS_CATEGORIES } from './BusinessPresets';
-import { getGoogleAuthUrl, API_URL } from '../services/apiService';
+import { Building, Key, Star, BarChart3, MessageSquare, ExternalLink, Settings, Save, CheckCircle2, ShieldAlert, Sparkles, Filter, ChevronRight, Share2, CreditCard, Loader2, RefreshCw, Package, Plus, X, Check, PackagePlus, Tag } from 'lucide-react';
+import { BUSINESS_CATEGORIES, getCategoryDefaultProducts } from './BusinessPresets';
+import { getGoogleAuthUrl, getProductSuggestions, API_URL } from '../services/apiService';
 
 export default function ClientDashboard({ business, onUpdateBusiness, internalFeedback = [], googleReviews = [], onResolveFeedback, onUpgrade, onRefresh }) {
   const [activeTab, setActiveTab] = useState('analytics');
   
   const isCustomCategory = business.category && !BUSINESS_CATEGORIES.find(c => c.id === business.category);
+  
+  const initialItems = Array.isArray(business.top_selling_items)
+    ? business.top_selling_items
+    : (typeof business.top_selling_items === 'string' && business.top_selling_items.trim()
+        ? (() => {
+            try { return JSON.parse(business.top_selling_items); } catch(e) { return business.top_selling_items.split(',').map(s => s.trim()).filter(Boolean); }
+          })()
+        : []);
+
   const [formData, setFormData] = useState({ 
     ...business, 
-    category: isCustomCategory ? 'others' : (business.category || 'restaurant')
+    category: isCustomCategory ? 'others' : (business.category || 'restaurant'),
+    top_selling_items: initialItems
   });
+  const [newProductInput, setNewProductInput] = useState('');
+  const [loadingAiProducts, setLoadingAiProducts] = useState(false);
   const [customCategory, setCustomCategory] = useState(isCustomCategory ? business.category : '');
   const [customCategoryError, setCustomCategoryError] = useState(false);
   const [analyzingLink, setAnalyzingLink] = useState(false);
@@ -53,6 +65,53 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
     onUpdateBusiness(dataToUpdate);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
+  };
+
+  const handleAddProduct = (itemToAdd) => {
+    if (!itemToAdd || !itemToAdd.trim()) return;
+    const trimmed = itemToAdd.trim();
+    const current = formData.top_selling_items || [];
+    if (!current.includes(trimmed)) {
+      setFormData(prev => ({
+        ...prev,
+        top_selling_items: [...(prev.top_selling_items || []), trimmed]
+      }));
+    }
+    setNewProductInput('');
+  };
+
+  const handleRemoveProduct = (itemToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      top_selling_items: (prev.top_selling_items || []).filter(item => item !== itemToRemove)
+    }));
+  };
+
+  const handleFetchAiSuggestions = async () => {
+    setLoadingAiProducts(true);
+    try {
+      const catObj = BUSINESS_CATEGORIES.find(c => c.id === formData.category);
+      const catName = catObj ? catObj.name : (formData.category === 'others' ? customCategory : formData.category);
+      const suggestions = await getProductSuggestions(
+        catName, 
+        formData.business_location || '', 
+        formData.city || formData.business_location || '', 
+        newProductInput, 
+        formData.top_selling_items || []
+      );
+      if (suggestions && suggestions.length > 0) {
+        const current = formData.top_selling_items || [];
+        const toAdd = suggestions.filter(s => !current.includes(s));
+        setFormData(prev => ({
+          ...prev,
+          top_selling_items: [...(prev.top_selling_items || []), ...toAdd.slice(0, 6)]
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to get AI product suggestions', err);
+    } finally {
+      setLoadingAiProducts(false);
+    }
   };
 
   const handleAnalyzeLink = async () => {
@@ -439,7 +498,12 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
                     </p>
 
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-50">
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {fb.product && (
+                          <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md border border-indigo-100 flex items-center gap-1">
+                            <Package className="w-3 h-3 text-indigo-500" /> {fb.product}
+                          </span>
+                        )}
                         {chipsList.map(chip => (
                            <span key={chip} className="text-[10px] font-bold uppercase tracking-wide bg-rose-50 text-rose-600 px-2.5 py-1 rounded-md border border-rose-100">
                              {chip}
@@ -663,7 +727,128 @@ export default function ClientDashboard({ business, onUpdateBusiness, internalFe
               />
             </div>
 
-            {/* Section 2: Integrations & AI */}
+            {/* Section 2: Products & Services Catalog */}
+            <div className="md:col-span-2 mt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2 mb-4">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Package className="w-3.5 h-3.5 text-indigo-500" /> Products & Services Offered
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    List what you sell or provide (e.g. Cafe: Cappuccino, Croissant; Solar: Rooftop Solar Installation; Salon: Haircut). When customers scan your QR code, they can select the exact item they purchased to get a laser-focused, personalized review instead of random feedback.
+                  </p>
+                </div>
+                <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-full shrink-0">
+                  {(formData.top_selling_items || []).length} Listed
+                </span>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 space-y-4">
+                {/* Active Items */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                    Current Catalog Items
+                  </label>
+                  {(formData.top_selling_items || []).length === 0 ? (
+                    <div className="text-center py-6 border-2 border-dashed border-slate-200 rounded-xl bg-white/70">
+                      <PackagePlus className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                      <p className="text-sm font-bold text-slate-700">No products or services listed yet</p>
+                      <p className="text-xs text-slate-400 mt-0.5">Type below or click quick suggestions to build your offerings.</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {(formData.top_selling_items || []).map((item, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1.5 bg-white border border-indigo-200 text-indigo-900 px-3 py-1.5 rounded-xl text-xs font-bold shadow-xs group hover:border-indigo-300 transition-all"
+                        >
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>{item}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveProduct(item)}
+                            className="text-slate-400 hover:text-rose-500 p-0.5 rounded-full hover:bg-rose-50 transition-colors ml-1"
+                            title={`Remove ${item}`}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Add Input */}
+                <div className="pt-2 border-t border-slate-200/60">
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                    Add Product or Service
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newProductInput}
+                      onChange={(e) => setNewProductInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddProduct(newProductInput);
+                        }
+                      }}
+                      placeholder="e.g. 5kW Solar Rooftop Installation, Cold Brew, Hair Spa..."
+                      className="flex-1 bg-white border border-slate-200 rounded-xl p-3 text-slate-900 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddProduct(newProductInput)}
+                      className="px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all shadow-sm flex items-center gap-1.5 shrink-0 hover:-translate-y-0.5"
+                    >
+                      <Plus className="w-4 h-4" /> Add Item
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick suggestions based on category */}
+                <div className="pt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Quick Add for {BUSINESS_CATEGORIES.find(c => c.id === formData.category)?.name || 'Your Business'}:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleFetchAiSuggestions}
+                      disabled={loadingAiProducts}
+                      className="text-[11px] text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1 transition-colors disabled:opacity-50"
+                    >
+                      {loadingAiProducts ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                      AI Suggest More
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {getCategoryDefaultProducts(formData.category).map((item, idx) => {
+                      const isAlreadyAdded = (formData.top_selling_items || []).includes(item);
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => !isAlreadyAdded && handleAddProduct(item)}
+                          disabled={isAlreadyAdded}
+                          className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1 ${
+                            isAlreadyAdded
+                              ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
+                              : 'bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 hover:border-indigo-200 shadow-2xs'
+                          }`}
+                        >
+                          {isAlreadyAdded ? <Check className="w-3 h-3 text-emerald-500" /> : <Plus className="w-3 h-3 text-indigo-500" />}
+                          {item}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: Integrations & AI */}
             <div className="md:col-span-2 mt-4">
               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">Integrations & AI Settings</h4>
             </div>

@@ -5,12 +5,24 @@ let initialized = false;
 let initializing = null;
 
 async function createConnection() {
+  if (hyperdrive) {
+    return mysql.createConnection({
+      host: hyperdrive.host,
+      user: hyperdrive.user,
+      password: hyperdrive.password,
+      database: hyperdrive.database,
+      port: hyperdrive.port,
+      disableEval: true
+    });
+  }
+
+  // Direct server MySQL connection (Hostinger / Node server / VPS / Production)
   return mysql.createConnection({
-    host: hyperdrive.host,
-    user: hyperdrive.user,
-    password: hyperdrive.password,
-    database: hyperdrive.database,
-    port: hyperdrive.port,
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'u527069138_qrform',
+    password: process.env.DB_PASSWORD || 'r7M7Y^qt?0!L',
+    database: process.env.DB_NAME || 'u527069138_qrform',
+    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 3306,
     disableEval: true
   });
 }
@@ -140,6 +152,19 @@ async function initTablesMysql(pool) {
   );
 `;
 
+  const generatedReviewsQuery = `
+    CREATE TABLE IF NOT EXISTS generated_reviews (
+      id VARCHAR(255) PRIMARY KEY,
+      business_id VARCHAR(255) NOT NULL,
+      product VARCHAR(255),
+      language VARCHAR(50),
+      rating INT,
+      review_text TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_gen_biz (business_id)
+    );
+  `;
+
   await pool.query(usersQuery);
   try {
     await pool.query("ALTER TABLE users ADD COLUMN subscription_ends_at TIMESTAMP NULL");
@@ -152,6 +177,10 @@ async function initTablesMysql(pool) {
   try { await pool.query("ALTER TABLE businesses ADD COLUMN business_location VARCHAR(1024)"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN ai_analysis_results TEXT"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN language VARCHAR(50) DEFAULT 'en'"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN auto_reply_enabled BOOLEAN DEFAULT FALSE"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN google_access_token TEXT"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN google_refresh_token TEXT"); } catch (err) {}
+  try { await pool.query("ALTER TABLE businesses ADD COLUMN google_account_id VARCHAR(255)"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN business_details TEXT"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN seo_last_updated TIMESTAMP NULL"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN upi_id TEXT"); } catch (err) {}
@@ -160,6 +189,7 @@ async function initTablesMysql(pool) {
   try { await pool.query("ALTER TABLE feedback ADD COLUMN customer_name VARCHAR(255)"); } catch (err) {}
   try { await pool.query("ALTER TABLE feedback ADD COLUMN customer_contact VARCHAR(255)"); } catch (err) {}
   try { await pool.query("ALTER TABLE feedback ADD COLUMN chips TEXT"); } catch (err) {}
+  try { await pool.query("ALTER TABLE feedback ADD COLUMN product TEXT"); } catch (err) {}
   await pool.query(businessQuery);
   await pool.query(googleReviewsQuery);
   await pool.query(feedbackQuery);
@@ -167,140 +197,9 @@ async function initTablesMysql(pool) {
   await pool.query(supportTicketsQuery);
   await pool.query(crmLeadsQuery);
   await pool.query(chatLogsQuery);
+  await pool.query(generatedReviewsQuery);
   
   console.log('✅ MySQL tables initialized.');
-}
-
-function initTablesSqlite(database) {
-  database.serialize(() => {
-    database.run(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        status TEXT DEFAULT 'pending_setup',
-        role TEXT DEFAULT 'user',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        subscription_ends_at DATETIME
-      )
-    `);
-
-    // Safely add column if upgrading existing DB
-    database.run(`ALTER TABLE users ADD COLUMN subscription_ends_at DATETIME`, (err) => {});
-    database.run(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'`, (err) => {});
-    database.run(`ALTER TABLE businesses ADD COLUMN auto_reply_enabled INTEGER DEFAULT 0`, (err) => {
-      // Ignore error if column already exists
-    });
-    database.run(`ALTER TABLE businesses ADD COLUMN mobile_number TEXT`, (err) => {});
-    database.run(`ALTER TABLE businesses ADD COLUMN top_selling_items TEXT`, (err) => {});
-    database.run(`ALTER TABLE businesses ADD COLUMN business_location TEXT`, (err) => {});
-    database.run(`ALTER TABLE businesses ADD COLUMN ai_analysis_results TEXT`, (err) => {});
-    database.run(`ALTER TABLE businesses ADD COLUMN language TEXT DEFAULT 'en'`, (err) => {});
-    database.run(`ALTER TABLE businesses ADD COLUMN business_details TEXT`, (err) => {});
-    database.run(`ALTER TABLE businesses ADD COLUMN seo_last_updated DATETIME`, (err) => {});
-
-    database.run(`
-      CREATE TABLE IF NOT EXISTS businesses (
-        id TEXT PRIMARY KEY,
-        user_id INTEGER NOT NULL,
-        name TEXT,
-        tagline TEXT,
-        category TEXT,
-        owner_name TEXT,
-        logo_url TEXT,
-        google_place_id TEXT,
-        google_review_url TEXT,
-        target_keywords TEXT,
-        offer_banner TEXT,
-        total_scans INTEGER DEFAULT 0,
-        google_review_count INTEGER DEFAULT 0,
-        avg_rating REAL DEFAULT 0.0,
-        intercepted_bad_reviews INTEGER DEFAULT 0,
-        google_access_token TEXT,
-        google_refresh_token TEXT,
-        google_account_id TEXT,
-        auto_reply_enabled INTEGER DEFAULT 0,
-        mobile_number TEXT,
-        top_selling_items TEXT,
-        business_location TEXT,
-        ai_analysis_results TEXT,
-        language TEXT DEFAULT 'en',
-        business_details TEXT,
-        seo_last_updated DATETIME,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )
-    `);
-
-    database.run(`
-      CREATE TABLE IF NOT EXISTS google_reviews (
-        review_id TEXT PRIMARY KEY,
-        business_id TEXT NOT NULL,
-        rating INTEGER,
-        comment TEXT,
-        reviewer_name TEXT,
-        ai_reply TEXT,
-        reply_posted INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
-      )
-    `);
-
-    database.run(`
-      CREATE TABLE IF NOT EXISTS feedback (
-        id TEXT PRIMARY KEY,
-        business_id TEXT NOT NULL,
-        rating INTEGER,
-        message TEXT,
-        customer_name TEXT,
-        customer_contact TEXT,
-        date TEXT,
-        status TEXT DEFAULT 'Unresolved',
-        chips TEXT,
-        FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
-      )
-    `);
-
-    database.run(`
-      CREATE TABLE IF NOT EXISTS payments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        razorpay_order_id TEXT,
-        razorpay_payment_id TEXT,
-        amount REAL,
-        plan_duration_days INTEGER,
-        status TEXT DEFAULT 'success',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )
-    `);
-
-    database.run(`
-      CREATE TABLE IF NOT EXISTS support_tickets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        subject TEXT,
-        message TEXT,
-        reply TEXT,
-        status TEXT DEFAULT 'open',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )
-    `);
-
-    database.run(`
-      CREATE TABLE IF NOT EXISTS crm_leads (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        session_id TEXT,
-        name TEXT,
-        mobile TEXT,
-        business_name TEXT,
-        location TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    console.log('✅ SQLite tables initialized.');
-  });
 }
 
 let localDb = null;
@@ -309,38 +208,41 @@ async function query(sql, params = []) {
   // Sanitize all parameters to avoid mysql2 "Bind parameters must not contain undefined" errors
   const sanitizedParams = params.map(p => (p === undefined ? null : p));
 
-  if (!hyperdrive) {
-    if (!localDb) {
-      localDb = require('./db.local');
+  const isServer = Boolean(hyperdrive || process.env.NODE_ENV === 'production' || process.env.DB_HOST);
+
+  if (isServer) {
+    if (!initialized) {
+      if (!initializing) {
+        initializing = (async () => {
+          const connection = await createConnection();
+
+          try {
+            await initTablesMysql(connection);
+            initialized = true;
+          } finally {
+            await connection.end();
+          }
+        })();
+      }
+
+      await initializing;
     }
-    return localDb.query(sql, sanitizedParams);
-  }
 
-  if (!initialized) {
-    if (!initializing) {
-      initializing = (async () => {
-        const connection = await createConnection();
+    const connection = await createConnection();
 
-        try {
-          await initTablesMysql(connection);
-          initialized = true;
-        } finally {
-          await connection.end();
-        }
-      })();
+    try {
+      const [rows] = await connection.query(sql, sanitizedParams);
+      return rows;
+    } finally {
+      await connection.end();
     }
-
-    await initializing;
   }
 
-  const connection = await createConnection();
-
-  try {
-    const [rows] = await connection.query(sql, sanitizedParams);
-    return rows;
-  } finally {
-    await connection.end();
+  // Local development fallback
+  if (!localDb) {
+    localDb = require('./db.local');
   }
+  return localDb.query(sql, sanitizedParams);
 }
 
 function setHyperdrive(binding) {

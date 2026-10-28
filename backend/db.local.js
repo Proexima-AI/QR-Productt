@@ -164,6 +164,19 @@ async function initTablesMysql(pool) {
     );
   `;
 
+  const generatedReviewsQuery = `
+    CREATE TABLE IF NOT EXISTS generated_reviews (
+      id VARCHAR(255) PRIMARY KEY,
+      business_id VARCHAR(255) NOT NULL,
+      product VARCHAR(255),
+      language VARCHAR(50),
+      rating INT,
+      review_text TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_gen_biz (business_id)
+    );
+  `;
+
   await pool.query(usersQuery);
   try {
     await pool.query("ALTER TABLE users ADD COLUMN subscription_ends_at TIMESTAMP NULL");
@@ -178,12 +191,17 @@ async function initTablesMysql(pool) {
   try { await pool.query("ALTER TABLE businesses ADD COLUMN ai_analysis_results TEXT"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN business_details TEXT"); } catch (err) {}
   try { await pool.query("ALTER TABLE businesses ADD COLUMN seo_last_updated TIMESTAMP NULL"); } catch (err) {}
+  try { await pool.query("ALTER TABLE feedback ADD COLUMN customer_name VARCHAR(255)"); } catch (err) {}
+  try { await pool.query("ALTER TABLE feedback ADD COLUMN customer_contact VARCHAR(255)"); } catch (err) {}
+  try { await pool.query("ALTER TABLE feedback ADD COLUMN chips TEXT"); } catch (err) {}
+  try { await pool.query("ALTER TABLE feedback ADD COLUMN product TEXT"); } catch (err) {}
   await pool.query(businessQuery);
   await pool.query(googleReviewsQuery);
   await pool.query(feedbackQuery);
   await pool.query(paymentsQuery);
   await pool.query(supportTicketsQuery);
   await pool.query(crmLeadsQuery);
+  await pool.query(generatedReviewsQuery);
   console.log('✅ MySQL tables initialized.');
 }
 
@@ -273,9 +291,11 @@ function initTablesSqlite(database) {
         date TEXT,
         status TEXT DEFAULT 'Unresolved',
         chips TEXT,
+        product TEXT,
         FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
       )
     `);
+    database.run(`ALTER TABLE feedback ADD COLUMN product TEXT`, (err) => {});
 
     database.run(`
       CREATE TABLE IF NOT EXISTS payments (
@@ -316,6 +336,20 @@ function initTablesSqlite(database) {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    database.run(`
+      CREATE TABLE IF NOT EXISTS generated_reviews (
+        id TEXT PRIMARY KEY,
+        business_id TEXT NOT NULL,
+        product TEXT,
+        language TEXT,
+        rating INTEGER,
+        review_text TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    database.run(`CREATE INDEX IF NOT EXISTS idx_gen_biz ON generated_reviews(business_id)`);
+
     console.log('✅ SQLite tables initialized.');
   });
 }
