@@ -1,8 +1,18 @@
 export const BUSINESS_CATEGORIES = [
   {
     id: 'restaurant',
-    name: 'Restaurant / Cafe',
+    name: 'Restaurant / Dining',
     icon: 'Utensils',
+    defaultProducts: [
+      'Signature Biryani',
+      'Butter Chicken / Paneer',
+      'Wood-Fired Pizza',
+      'Creamy Alfredo Pasta',
+      'Crispy Starters & Appetizers',
+      'Traditional Thali Platter',
+      'Artisanal Mocktails',
+      'Molten Lava Cake'
+    ],
     chips: [
       'Delicious Food',
       'Warm Atmosphere',
@@ -14,13 +24,77 @@ export const BUSINESS_CATEGORIES = [
       'Unique Cocktails'
     ],
     defaultKeywords: 'best restaurant, delicious food, top lunch spot, dinner',
-    googlePlaceId: 'ChIJN1t_tDeuEmsRUsoyG83frY4', // Example Google Place ID
+    googlePlaceId: 'ChIJN1t_tDeuEmsRUsoyG83frY4',
+    googleReviewUrl: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4'
+  },
+  {
+    id: 'cafe',
+    name: 'Cafe / Bakery / Coffee Shop',
+    icon: 'Coffee',
+    defaultProducts: [
+      'Artisan Cappuccino',
+      'Iced Caramel Macchiato',
+      'Cold Brew Coffee',
+      'Fresh Butter Croissant',
+      'Grilled Cheese Panini',
+      'Avocado Toast',
+      'Blueberry Cheesecake',
+      'Belgian Waffle'
+    ],
+    chips: [
+      'Rich Coffee Flavor',
+      'Cozy Ambiance',
+      'Fresh Pastries',
+      'Friendly Barista',
+      'Fast Wi-Fi',
+      'Great Study Vibe',
+      'Aesthetic Presentation'
+    ],
+    defaultKeywords: 'best cafe, artisan coffee, specialty coffee, cozy cafe, fresh bakery',
+    googlePlaceId: 'ChIJN1t_tDeuEmsRUsoyG83frY4',
+    googleReviewUrl: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4'
+  },
+  {
+    id: 'solar',
+    name: 'Solar / Renewable Energy',
+    icon: 'Sun',
+    defaultProducts: [
+      '5kW Rooftop Solar Installation',
+      '3kW On-Grid Solar Plant',
+      'Solar Inverter Setup & Testing',
+      'Solar Panel Cleaning & Maintenance',
+      'Commercial Solar System',
+      'Solar Battery Storage Backup',
+      'Net Metering & Subsidy Assistance',
+      'Solar Water Heater Setup'
+    ],
+    chips: [
+      'Fast Installation',
+      'High Energy Yield',
+      'Subsidy Assistance',
+      'Professional Wiring',
+      'Zero Power Cuts',
+      'Clean Workmanship',
+      'Great Support'
+    ],
+    defaultKeywords: 'best solar company, rooftop solar installation, solar panels price, top solar installer',
+    googlePlaceId: 'ChIJN1t_tDeuEmsRUsoyG83frY4',
     googleReviewUrl: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4'
   },
   {
     id: 'salon',
     name: 'Salon / Barber / Spa',
     icon: 'Scissors',
+    defaultProducts: [
+      'Designer Haircut & Styling',
+      'Hair Spa & Keratin Treatment',
+      'Hydra Facial & Skin Glow',
+      'Beard Grooming & Shape',
+      'Hair Coloring & Balayage',
+      'Aroma Full Body Massage',
+      'Deluxe Pedicure & Manicure',
+      'Bridal / Groom Makeover'
+    ],
     chips: [
       'Skilled Stylist',
       'Great Haircut',
@@ -39,6 +113,15 @@ export const BUSINESS_CATEGORIES = [
     id: 'medical',
     name: 'Clinic / Dental / Care',
     icon: 'Stethoscope',
+    defaultProducts: [
+      'General Physician Consultation',
+      'Dental Cleaning & Polishing',
+      'Painless Root Canal',
+      'Teeth Whitening',
+      'Full Body Health Checkup',
+      'Skin & Dermatology Consult',
+      'Pediatric Care'
+    ],
     chips: [
       'Gentle & Caring',
       'Zero Wait Time',
@@ -57,6 +140,15 @@ export const BUSINESS_CATEGORIES = [
     id: 'auto',
     name: 'Auto Repair / Garage',
     icon: 'Car',
+    defaultProducts: [
+      'Full Periodic Car Service',
+      'Synthetic Engine Oil & Filter Change',
+      'Brake Pad Replacement & Inspection',
+      'Car AC Gas Top-up & Cooling Service',
+      '3D Wheel Alignment & Balancing',
+      'Dent Removal & Premium Paint',
+      'Complete Car Detailing & Foam Wash'
+    ],
     chips: [
       'Honest Pricing',
       'Fast Turnaround',
@@ -74,6 +166,14 @@ export const BUSINESS_CATEGORIES = [
     id: 'home_services',
     name: 'Plumbing / HVAC / Electrician',
     icon: 'Wrench',
+    defaultProducts: [
+      'Split / Window AC Deep Jet Cleaning',
+      'AC Installation & Gas Refill',
+      'Bathroom Leakage & Pipe Repair',
+      'Water Purifier RO Filter Service',
+      'Home Electrical Rewiring & MCB Fix',
+      'Geyser / Water Heater Repair'
+    ],
     chips: [
       'Punctual Arrival',
       'Clean Worksite',
@@ -90,6 +190,14 @@ export const BUSINESS_CATEGORIES = [
     id: 'retail',
     name: 'Retail Store / Boutique',
     icon: 'ShoppingBag',
+    defaultProducts: [
+      'Designer Ethnic Wear & Sarees',
+      'Casual Shirts & Trousers',
+      'Handcrafted Jewelry & Sets',
+      'Leather Footwear & Sneakers',
+      'Luxury Perfumes & Scents',
+      'Custom Tailoring & Alteration'
+    ],
     chips: [
       'Great Selection',
       'Helpful Staff',
@@ -106,6 +214,12 @@ export const BUSINESS_CATEGORIES = [
     id: 'others',
     name: 'Others',
     icon: 'Building',
+    defaultProducts: [
+      'Standard Service Package',
+      'Premium Consultation',
+      'Express Order',
+      'Customized Solution'
+    ],
     chips: [
       'Great Service',
       'High Quality',
@@ -119,6 +233,15 @@ export const BUSINESS_CATEGORIES = [
     googleReviewUrl: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4'
   }
 ];
+
+export const getCategoryDefaultProducts = (categoryId) => {
+  const match = BUSINESS_CATEGORIES.find(c => c.id === categoryId);
+  return match?.defaultProducts || [
+    'Standard Service Package',
+    'Premium Consultation',
+    'Custom Order'
+  ];
+};
 
 export const DEMO_BUSINESS = {
   id: 'bizz_101',

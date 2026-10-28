@@ -103,7 +103,18 @@ app.get('/api/business/me', authenticate, async (req, res) => {
   try {
     const businesses = await query('SELECT * FROM businesses WHERE user_id = ?', [req.user.id]);
     if (businesses.length === 0) return res.status(404).json({ error: 'Business not found' });
-    res.json(businesses[0]);
+    const biz = { ...businesses[0] };
+    if (biz.top_selling_items && typeof biz.top_selling_items === 'string') {
+      try {
+        biz.top_selling_items = JSON.parse(biz.top_selling_items);
+      } catch (e) {
+        biz.top_selling_items = biz.top_selling_items.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+    if (!Array.isArray(biz.top_selling_items)) {
+      biz.top_selling_items = [];
+    }
+    res.json(biz);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
@@ -115,7 +126,18 @@ app.get('/api/business/:id', async (req, res) => {
   try {
     const businesses = await query('SELECT * FROM businesses WHERE id = ?', [req.params.id]);
     if (businesses.length === 0) return res.status(404).json({ error: 'Business not found' });
-    res.json(businesses[0]);
+    const biz = { ...businesses[0] };
+    if (biz.top_selling_items && typeof biz.top_selling_items === 'string') {
+      try {
+        biz.top_selling_items = JSON.parse(biz.top_selling_items);
+      } catch (e) {
+        biz.top_selling_items = biz.top_selling_items.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+    if (!Array.isArray(biz.top_selling_items)) {
+      biz.top_selling_items = [];
+    }
+    res.json(biz);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
@@ -124,14 +146,27 @@ app.get('/api/business/:id', async (req, res) => {
 
 // Update business profile
 app.put('/api/business/me', authenticate, async (req, res) => {
-  const { name, tagline, category, owner_name, google_place_id, google_review_url, target_keywords, offer_banner, upi_id, auto_reply_enabled, language, business_details } = req.body;
+  const { name, tagline, category, owner_name, google_place_id, google_review_url, target_keywords, offer_banner, upi_id, auto_reply_enabled, language, business_details, top_selling_items } = req.body;
   try {
+    let serializedItems = '[]';
+    if (Array.isArray(top_selling_items)) {
+      serializedItems = JSON.stringify(top_selling_items);
+    } else if (typeof top_selling_items === 'string' && top_selling_items.trim().startsWith('[')) {
+      try {
+        serializedItems = JSON.stringify(JSON.parse(top_selling_items));
+      } catch (e) {
+        serializedItems = JSON.stringify([top_selling_items]);
+      }
+    } else if (top_selling_items && typeof top_selling_items === 'string') {
+      serializedItems = JSON.stringify(top_selling_items.split(',').map(s => s.trim()).filter(Boolean));
+    }
+
     await query(
       `UPDATE businesses SET 
         name = ?, tagline = ?, category = ?, owner_name = ?, 
-        google_place_id = ?, google_review_url = ?, target_keywords = ?, offer_banner = ?, upi_id = ?, auto_reply_enabled = ?, language = ?, business_details = ?
+        google_place_id = ?, google_review_url = ?, target_keywords = ?, offer_banner = ?, upi_id = ?, auto_reply_enabled = ?, language = ?, business_details = ?, top_selling_items = ?
       WHERE user_id = ?`,
-      [name, tagline, category, owner_name, google_place_id, google_review_url, target_keywords, offer_banner, upi_id, auto_reply_enabled, language || 'en', business_details, req.user.id]
+      [name, tagline, category, owner_name, google_place_id, google_review_url, target_keywords, offer_banner, upi_id, auto_reply_enabled, language || 'en', business_details, serializedItems, req.user.id]
     );
     res.json({ success: true });
   } catch (error) {
@@ -353,12 +388,13 @@ app.post('/api/feedback', async (req, res) => {
   const chipsStr = Array.isArray(chips) ? chips.join(',') : (chips || '');
   const ratingNum = Math.max(1, Math.min(5, Number(rating) || 1));
   const safeMessage = message && message.toString().trim() ? message.toString().trim() : 'Customer left feedback without comments.';
+  const productStr = (req.body.product || (Array.isArray(req.body.products) ? req.body.products.join(', ') : (req.body.selectedProducts ? (Array.isArray(req.body.selectedProducts) ? req.body.selectedProducts.join(', ') : req.body.selectedProducts) : ''))).toString().trim();
 
   try {
     await query(
-      `INSERT INTO feedback (id, business_id, rating, message, customer_name, customer_contact, date, chips) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, business_id, ratingNum, safeMessage, customer_name, customer_contact, date, chipsStr]
+      `INSERT INTO feedback (id, business_id, rating, message, customer_name, customer_contact, date, chips, product) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, business_id, ratingNum, safeMessage, customer_name, customer_contact, date, chipsStr, productStr || null]
     );
     // Update intercepted stats
     await query('UPDATE businesses SET intercepted_bad_reviews = intercepted_bad_reviews + 1 WHERE id = ?', [business_id]);
@@ -392,6 +428,7 @@ app.get('/api/feedback/me', authenticate, async (req, res) => {
         customerContact: contact,
         customer_name: name,
         customer_contact: contact,
+        product: fb.product || '',
         rating: Math.max(1, Math.min(5, Number(fb.rating) || 1)),
         chips: fb.chips ? (Array.isArray(fb.chips) ? fb.chips : fb.chips.split(',').map(c => c.trim()).filter(Boolean)) : []
       };
@@ -420,21 +457,99 @@ app.put('/api/feedback/:id/resolve', authenticate, async (req, res) => {
 // ========================
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+const CATEGORY_DEFAULT_PRODUCTS = {
+  cafe: [
+    'Artisan Cappuccino', 'Iced Caramel Macchiato', 'Cold Brew Coffee', 
+    'Fresh Butter Croissant', 'Grilled Cheese Panini', 'Avocado Toast', 
+    'Blueberry Cheesecake', 'Belgian Waffle'
+  ],
+  restaurant: [
+    'Chef Special Main Course', 'Signature Appetizers', 'Wood-Fired Pizza', 
+    'Artisanal Mocktails', 'Creamy Alfredo Pasta', 'Traditional Thali Platter', 
+    'Molten Lava Cake'
+  ],
+  solar: [
+    '5kW Rooftop Solar Installation', '3kW On-Grid Solar Plant', 'Solar Inverter Setup & Testing', 
+    'Solar Panel Cleaning & Maintenance', 'Commercial Solar System', 'Solar Battery Storage Backup', 
+    'Net Metering & Subsidy Assistance', 'Solar Water Heater Setup'
+  ],
+  salon: [
+    'Designer Haircut & Styling', 'Hair Spa & Keratin Treatment', 'Hydra Facial & Skin Glow', 
+    'Beard Grooming & Shape', 'Hair Coloring & Balayage', 'Aroma Full Body Massage', 
+    'Deluxe Pedicure & Manicure', 'Bridal / Groom Makeover'
+  ],
+  medical: [
+    'General Health Consultation', 'Diagnostic Blood & Health Checkup', 'Dental Cleaning & Polishing', 
+    'Physiotherapy Session', 'Pediatric Care & Vaccination', 'Preventive Health Screening'
+  ],
+  auto: [
+    'Complete Periodic Car Service', 'Wheel Alignment & Balancing', 'Deep Foam Wash & Detailing', 
+    'Brake & Suspension Inspection', 'AC Disinfection & Gas Refill', 'Ceramic Paint Protection'
+  ],
+  home_services: [
+    'AC Deep Cleaning & Service', 'Electrical Wiring & Repair', 'Plumbing Leakage Fix', 
+    'Water Purifier RO Service', 'Sofa & Carpet Shampooing', 'Full Home Pest Control'
+  ],
+  retail: [
+    'Trending Season Collection', 'Custom Fitting & Alterations', 'Gift Vouchers & Packaging', 
+    'Premium Accessories', 'Loyalty Rewards Program', 'Exchange & Warranty Support'
+  ],
+  others: [
+    'Core Service Consultation', 'On-Time Project Delivery', 'Custom Tailored Solutions', 
+    'Dedicated Customer Support', 'Post-Service Warranty'
+  ]
+};
+
 app.post('/api/generate-review', async (req, res) => {
-  const { businessName, category, rating, topics, instructions, language, location, city, business_id } = req.body;
+  const { businessName, category, rating, topics, instructions, language, location, city, business_id, selectedProducts, selectedProduct, products, allProducts, catalog } = req.body;
   const ratingNum = Math.max(1, Math.min(5, Number(rating) || 5));
   const isPositive = ratingNum >= 4;
 
   let effectiveLocation = (city || location || '').trim();
+  let effectiveCategory = (category || '').toLowerCase();
 
-  // If business_id is passed, attempt to retrieve or auto-populate business_location
+  // Extract selected products / services
+  let productList = [];
+  if (Array.isArray(selectedProducts)) {
+    productList = selectedProducts;
+  } else if (selectedProducts && typeof selectedProducts === 'string') {
+    productList = [selectedProducts];
+  } else if (selectedProduct) {
+    productList = Array.isArray(selectedProduct) ? selectedProduct : [selectedProduct];
+  } else if (products) {
+    productList = Array.isArray(products) ? products : [products];
+  }
+  const chosenProductsText = productList.filter(Boolean).map(p => p.trim()).join(', ');
+
+  // Extract business catalog
+  let bizCatalog = [];
+  if (Array.isArray(allProducts) && allProducts.length > 0) {
+    bizCatalog = allProducts.filter(Boolean);
+  } else if (Array.isArray(catalog) && catalog.length > 0) {
+    bizCatalog = catalog.filter(Boolean);
+  }
+
+  // If business_id is passed, attempt to retrieve or auto-populate business_location & top_selling_items
   if (business_id) {
     try {
-      const bizRows = await query('SELECT business_location, target_keywords FROM businesses WHERE id = ?', [business_id]);
+      const bizRows = await query('SELECT business_location, target_keywords, top_selling_items, category FROM businesses WHERE id = ?', [business_id]);
       if (bizRows.length > 0) {
         const biz = bizRows[0];
+        if (!effectiveCategory && biz.category) {
+          effectiveCategory = biz.category.toLowerCase();
+        }
         if (!effectiveLocation && biz.business_location && biz.business_location.trim()) {
           effectiveLocation = biz.business_location.trim();
+        }
+
+        // If client didn't supply catalog, read from DB
+        if (bizCatalog.length === 0 && biz.top_selling_items) {
+          try {
+            const parsed = JSON.parse(biz.top_selling_items);
+            if (Array.isArray(parsed) && parsed.length > 0) bizCatalog = parsed.filter(Boolean);
+          } catch (e) {
+            bizCatalog = biz.top_selling_items.split(',').map(s => s.trim()).filter(Boolean);
+          }
         }
 
         // If GPS detected a valid location and business location is empty, auto-update the business profile!
@@ -454,6 +569,22 @@ app.post('/api/generate-review', async (req, res) => {
     }
   }
 
+  // Fallback to category default products if business has not defined custom products
+  if (bizCatalog.length === 0) {
+    const matchedKey = Object.keys(CATEGORY_DEFAULT_PRODUCTS).find(k => effectiveCategory.includes(k)) || 'others';
+    bizCatalog = CATEGORY_DEFAULT_PRODUCTS[matchedKey] || CATEGORY_DEFAULT_PRODUCTS.others;
+  }
+
+  // Dynamic Catalog Rotation: When customer didn't select an item, pick 1 or 2 items strictly from the business catalog
+  let rotatedCatalogItem = '';
+  if (bizCatalog.length > 0) {
+    const shuffled = [...bizCatalog].sort(() => 0.5 - Math.random());
+    rotatedCatalogItem = shuffled[0];
+    if (shuffled.length > 1 && Math.random() < 0.4) {
+      rotatedCatalogItem += ` & ${shuffled[1]}`;
+    }
+  }
+
   // Sanitize instructions and topics: replace or remove any [Your City] brackets
   let cleanInstructions = (instructions || '');
   if (effectiveLocation) {
@@ -461,6 +592,45 @@ app.post('/api/generate-review', async (req, res) => {
   } else {
     cleanInstructions = cleanInstructions.replace(/\s*(?:in|at|around)?\s*\[(?:Your\s*)?(?:City|Location|Area)\]/gi, '');
   }
+
+  // Query recently generated reviews for this business to enforce ZERO repetition
+  let previousReviews = [];
+  if (business_id) {
+    try {
+      const prevRows = await query(
+        'SELECT review_text FROM generated_reviews WHERE business_id = ? ORDER BY created_at DESC LIMIT 15',
+        [business_id]
+      );
+      previousReviews = prevRows.map(r => r.review_text).filter(Boolean);
+    } catch (e) {
+      console.warn('Could not fetch previous generated reviews:', e.message);
+    }
+  }
+
+  // Diverse Narrative Personas / Angles (Rotates dynamically every time)
+  const REVIEW_ANGLES = [
+    'A first-time customer who was pleasantly surprised by the premium experience and outcome.',
+    'A busy customer who appreciated the punctuality, seamless process, and stress-free service.',
+    'A client who visited based on a friend’s recommendation and found it lived up to all expectations.',
+    'A loyal local who considers this their trusted, go-to place in the area.',
+    'A discerning customer focusing specifically on the noticeable, high-quality craft and immediate result.',
+    'A visitor who was deeply impressed by the warm hospitality, clean setup, and attentive staff consultation.',
+    'A customer highlighting the genuine value, fair pricing, and honest advice with zero pushiness.',
+    'A customer who treated themselves for a special occasion and left feeling completely refreshed and satisfied.'
+  ];
+  const chosenAngle = REVIEW_ANGLES[Math.floor(Math.random() * REVIEW_ANGLES.length)];
+
+  // Diverse Sentence Style Directives (Ensures no two reviews open or structure the same)
+  const SENTENCE_STYLES = [
+    'Start immediately with an enthusiastic reaction to the product/service result without starting with the business name.',
+    'Start by complimenting the friendly and skilled team, then detail the product/service experience.',
+    'Start with a short, punchy opening sentence, followed by specific details on why the service stood out.',
+    'Start with how relaxing or smooth the entire visit felt from start to finish.',
+    'Adopt a conversational, genuine storytelling style with fresh phrasing.',
+    'Highlight the contrast between expectations and how delightfully the experience exceeded them.'
+  ];
+  const chosenStyle = SENTENCE_STYLES[Math.floor(Math.random() * SENTENCE_STYLES.length)];
+  const randomSeed = Math.random().toString(36).substring(2, 9);
 
   try {
     const langMap = {
@@ -475,27 +645,130 @@ app.post('/api/generate-review', async (req, res) => {
     };
     const fullLang = langMap[language] || language || 'English';
 
-    const languageInstruction = fullLang.toLowerCase() !== 'english'
-      ? `\n      CRITICAL: Write the review words in ${fullLang} language, BUT use ONLY the English alphabet (Romanized/transliterated script). For example, if the language is Hindi, you must output 'Bahut badhiya' instead of 'बहुत बढ़िया'. DO NOT use any native script.`
-      : '';
+    let languageInstruction = '';
+    const normLang = fullLang.toLowerCase();
+
+    if (normLang === 'odia') {
+      languageInstruction = `
+        CRITICAL ODIA LANGUAGE RULES (Romanized English script ONLY):
+        You MUST write in natural, modern conversational Odia (Latin alphabet) as spoken colloquially by locals in Bhubaneswar, Cuttack, and Odisha:
+        - Use authentic everyday spoken Odia phrases:
+          * Positive: "Mo anubhaba bohut badhiya thila" (My experience was great), "Service bohut bhalo lagila" (Really liked the service), "Staff mane bohut polite au professional thile" (Staff were very polite & professional), "Skin pura fresh au glow karuchi" (Skin is fresh and glowing), "Bohut satisfied" (Very satisfied).
+          * Negative/Constructive: "Service thik thila kintu auri bhalo heipariba" (Service was okay but could be better), "Staff mane auri dhyana debaku anurodha" (Request staff to pay more attention).
+          * Recommendation: "${effectiveLocation ? effectiveLocation + ' re ' : ''}salon/service khojuthile nischita eithiki asantu" (If looking for salon/service here, definitely visit), "Highly recommended!"
+        - Keep industry technical terms in English naturally: "Hydra Facial", "Haircut", "Salon", "Spa", "Service", "Staff", "Ambience", "Result", "Experience".
+        - STRICTLY FORBIDDEN: NEVER use awkward, archaic, or broken machine translations like "kheluchi", "ganicha", "dukhe", "dayitwabhari", "bhala sahita", "bodh karithili", "kuha thaanti", "manin sambhariba".
+        - Sentence structure MUST flow naturally like a real human review, NOT robotic translation.
+      `;
+    } else if (normLang === 'hindi') {
+      languageInstruction = `
+        CRITICAL HINDI LANGUAGE RULES (Hinglish / Roman script ONLY):
+        Write in natural, colloquial everyday Hinglish (Latin alphabet) as spoken in Indian cities:
+        - Use authentic phrases: "Mera experience bohot badhiya raha", "Staff kafi polite aur professional hai", "Service top-notch thi", "Definitely recommend karunga".
+        - Keep technical and service terms in English.
+        - DO NOT use archaic pure Hindi or awkward machine translations.
+      `;
+    } else if (normLang !== 'english') {
+      languageInstruction = `
+        CRITICAL LANGUAGE RULES: Write the review in ${fullLang} language using ONLY the English alphabet (Romanized/transliterated script).
+        Write in natural, modern conversational style as used by locals in daily messaging.
+        Keep brand names, technical terms, and service names in English.
+        DO NOT use robotic or archaic machine translations.
+      `;
+    }
+
+    const keywordInstruction = `
+        SEO KEYWORD RULE:
+        If target keywords are listed in Special Instructions, select AT MOST ONE (1) keyword that naturally fits the customer's specific purchase/service (${chosenProductsText || category}).
+        DO NOT stuff multiple keywords. Under NO circumstances should you list 3-5 different services (e.g. do NOT mention haircut, massage, bridal, and facial all in one review). A real customer review only discusses their actual visit.
+    `;
+
+    // Anti-repetition blacklist instruction
+    let antiRepetitionInstruction = '';
+    if (previousReviews.length > 0) {
+      antiRepetitionInstruction = `
+        CRITICAL ANTI-REPETITION CONSTRAINT (Zero Duplication Rule):
+        The following reviews were already recently generated for this business. You MUST NOT reuse their sentence starters, phrasing, structure, or vocabulary:
+        ${previousReviews.map((r, i) => `${i + 1}. "${r}"`).join('\n')}
+
+        Every single review must be 100% freshly written with unique phrasing, different vocabulary, and distinct sentence structures. Google penalizes repetitive templates. Do NOT copy any patterns from the above list.
+      `;
+    }
 
     const locationContext = effectiveLocation 
       ? `Location Context: The business is located in "${effectiveLocation}". Weave this city/location naturally into the review text.` 
       : `Location Context: No specific city provided. Do NOT output any bracketed placeholders like [Your City] or [City].`;
 
+    let productInstruction = '';
+    let negativeProductInstruction = '';
+
+    if (chosenProductsText) {
+      productInstruction = `
+        CRITICAL PRODUCT FOCUS: The customer explicitly selected that they purchased / experienced: "${chosenProductsText}".
+        You MUST center the review directly around "${chosenProductsText}". 
+        Mention how exceptional "${chosenProductsText}" was (e.g., taste, freshness, craftsmanship, styling, or service quality).
+        STRICT VERIFIED CATALOG ENFORCEMENT: ONLY praise "${chosenProductsText}".
+        Under NO circumstances should you mention any unlisted or random food, dish, drink, or service outside this business's verified catalog (${bizCatalog.slice(0, 8).join(', ')}).
+        The review MUST be clearly and specifically about "${chosenProductsText}".
+      `;
+      negativeProductInstruction = `
+        CRITICAL PRODUCT FOCUS: The customer specifically chose that they purchased / experienced: "${chosenProductsText}".
+        The feedback MUST focus specifically on their experience with "${chosenProductsText}" and what could be improved regarding it.
+        DO NOT provide vague, random feedback or mention unlisted items. Address "${chosenProductsText}" directly.
+      `;
+    } else if (rotatedCatalogItem) {
+      productInstruction = `
+        STRICT PRODUCT CATALOG RULE (ZERO-HALLUCINATION ENFORCEMENT):
+        The customer scanned the QR code without clicking a specific product badge.
+        The business's ONLY verified offerings are strictly:
+        ${bizCatalog.map(item => `• "${item}"`).join('\n')}
+
+        For this review, you MUST focus the customer's praise on their verified catalog offering: "${rotatedCatalogItem}".
+
+        CRITICAL BUSINESS PROTECTION RULE:
+        - You MUST NEVER invent, guess, or mention ANY item, dish, food, drink, or service outside their verified catalog above!
+        - FOR EXAMPLE: If this business is a Cafe, NEVER mention biryani, curry, chicken tikka, burgers, pizza, or anything not in their catalog.
+        - Mentioning unlisted items causes customers to walk in and ask the owner for items they do not sell.
+        - Every product, item, or service mentioned MUST be 100% strictly confined to: "${rotatedCatalogItem}" (or items verbatim from their catalog list above).
+      `;
+      negativeProductInstruction = `
+        STRICT PRODUCT CATALOG RULE:
+        The customer did not select a specific item. Their feedback relates to their experience with "${rotatedCatalogItem}".
+        DO NOT invent or mention any unlisted items outside their catalog.
+      `;
+    } else {
+      productInstruction = `
+        Focus genuinely on the overall service quality, ambience, and staff hospitality.
+        DO NOT invent specific food dishes, products, or services.
+      `;
+      negativeProductInstruction = `
+        Focus on overall visit and service responsiveness. DO NOT invent unlisted items.
+      `;
+    }
+
+    const varietyDirectives = `
+        PERSPECTIVE / ANGLE: ${chosenAngle}
+        STYLE DIRECTIVE: ${chosenStyle}
+        VARIATION TOKEN: [Seed: ${randomSeed}]
+    `;
+
     const prompt = isPositive
       ? `
-        You are an expert copywriter acting as a highly satisfied customer writing a Google review.
+        You are an authentic, highly satisfied customer writing a 100% unique Google review.
         Business Name: ${businessName}
         Category: ${category}
         Star Rating: ${ratingNum}/5
         ${locationContext}
+        ${productInstruction}
         Topics mentioned: ${topics && topics.length ? topics.join(', ') : 'None'}
         Special Instructions: ${cleanInstructions || 'None'}
+        ${varietyDirectives}
+        ${antiRepetitionInstruction}
         ${languageInstruction}
+        ${keywordInstruction}
 
         Write a glowing, authentic-sounding ${ratingNum}-star Google review for this business. 
-        Keep it between 2 to 4 sentences. It should sound human, genuine, and specifically mention the topics if provided.
+        Keep it between 2 to 3 sentences. It should sound human, genuine, and specifically mention the product/service and topics if provided.
         The review must be highly SEO friendly and use relevant keywords naturally.
         CRITICAL RULE: NEVER use bracketed placeholders like [Your City], [City], [Location], [Your Area], etc. Under NO circumstances should square brackets [] appear in your output. If a city is provided, use it naturally. If not, write the review without mentioning any location.
         Do not include quotes or surrounding conversational text. Just the review itself.
@@ -506,9 +779,13 @@ app.post('/api/generate-review', async (req, res) => {
         Category: ${category}
         Star Rating: ${ratingNum}/5
         ${locationContext}
+        ${negativeProductInstruction}
         Areas for improvement/Topics mentioned: ${topics && topics.length ? topics.join(', ') : 'Overall visit experience'}
         Special Instructions: ${cleanInstructions || 'Constructive, respectful, actionable'}
+        ${varietyDirectives}
+        ${antiRepetitionInstruction}
         ${languageInstruction}
+        ${keywordInstruction}
 
         Write a constructive, respectful ${ratingNum}-star private feedback explaining what could be improved.
         Keep it concise (2 to 3 sentences). Do not be overly harsh or rude, but be honest and clear about expectations.
@@ -518,7 +795,10 @@ app.post('/api/generate-review', async (req, res) => {
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }]
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.95,
+      presence_penalty: 0.8,
+      frequency_penalty: 0.7
     });
 
     let reviewText = response.choices[0].message.content.trim();
@@ -531,16 +811,46 @@ app.post('/api/generate-review', async (req, res) => {
     }
     reviewText = reviewText.replace(/\[.*?\]/g, '').replace(/\s{2,}/g, ' ').trim();
 
+    // Save generated review to history table to prevent future duplicates for this business
+    if (business_id && reviewText) {
+      try {
+        const genId = `gen_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        await query(
+          'INSERT INTO generated_reviews (id, business_id, product, language, rating, review_text) VALUES (?, ?, ?, ?, ?, ?)',
+          [genId, business_id, chosenProductsText || null, language || 'en', ratingNum, reviewText]
+        );
+      } catch (saveErr) {
+        console.warn('Could not record generated review:', saveErr.message);
+      }
+    }
+
     res.json({ review: reviewText, location: effectiveLocation });
   } catch (error) {
     console.error('AI Generation Error:', error);
     const locSnippet = effectiveLocation ? ` in ${effectiveLocation}` : '';
-    // Fallback if AI fails (e.g. rate limit)
-    if (ratingNum >= 4) {
-      res.json({ review: `I had a fantastic experience at ${businessName}${locSnippet}! Highly recommended for anyone looking for great ${category || 'service'}.` });
-    } else {
-      res.json({ review: `I visited ${businessName}${locSnippet} recently. While there are good aspects, the service and experience had a few areas that need attention to meet expectations.` });
-    }
+    
+    const featuredItem = chosenProductsText || rotatedCatalogItem || category || 'service';
+    
+    // Diverse randomized fallback pool so even offline fallbacks never repeat or mention unlisted items
+    const positiveFallbacks = [
+      `Visiting ${businessName}${locSnippet} was such a refreshing experience! The ${featuredItem} was handled with fantastic care and skill. Easily a 5-star experience!`,
+      `Had a wonderful visit to ${businessName}${locSnippet}. Really impressed by how attentive the staff was, and the ${featuredItem} exceeded my expectations!`,
+      `Outstanding quality and service at ${businessName}${locSnippet}! You can tell they take genuine pride in their work, especially with their ${featuredItem}. Highly recommend!`,
+      `Such a smooth and pleasant visit at ${businessName}${locSnippet}. The ${featuredItem} was top notch and the team is super polite. Will definitely return!`,
+      `If you're in ${effectiveLocation || 'the local area'}, ${businessName} is definitely worth visiting. Thoroughly enjoyed the ${featuredItem} and great hospitality!`,
+      `From the warm greeting to the final result, ${businessName}${locSnippet} delivered complete perfection. The ${featuredItem} was second to none.`,
+      `10/10 experience at ${businessName}${locSnippet}! The attention to detail with ${featuredItem} made all the difference.`
+    ];
+
+    const negativeFallbacks = [
+      `I visited ${businessName}${locSnippet} recently regarding the ${featuredItem}. While parts of the visit were okay, there are a few areas in service coordination that could be improved.`,
+      `Sharing some constructive feedback on my recent visit to ${businessName}${locSnippet}. The ${featuredItem} didn't quite meet expectations, and I hope management can look into streamlining customer wait times.`,
+      `A quick note for ${businessName}${locSnippet}: The ${featuredItem} has potential, but the overall experience felt slightly rushed. Appreciate the team taking this into consideration.`
+    ];
+
+    const fallbackList = isPositive ? positiveFallbacks : negativeFallbacks;
+    const randomFallback = fallbackList[Math.floor(Math.random() * fallbackList.length)];
+    res.json({ review: randomFallback, location: effectiveLocation });
   }
 });
 
@@ -1190,7 +1500,7 @@ if (require.main === module) {
       const businesses = await query(`
         SELECT id, name, category, business_location, top_selling_items, business_details, target_keywords
         FROM businesses 
-        WHERE seo_last_updated IS NULL OR seo_last_updated < datetime('now', '-10 days')
+        WHERE seo_last_updated IS NULL OR seo_last_updated < DATE_SUB(NOW(), INTERVAL 10 DAY)
       `);
       
       for (const biz of businesses) {
