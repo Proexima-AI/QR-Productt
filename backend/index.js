@@ -1015,41 +1015,157 @@ app.post('/api/business/sync-url', authenticate, async (req, res) => {
 });
 
 app.post('/api/business/search-places', async (req, res) => {
-  const { location, category, businessName } = req.body;
-  if (!location || location.length < 3) return res.json([]);
+  const { 
+    location, 
+    query, 
+    category, 
+    businessName, 
+    city, 
+    state, 
+    latitude, 
+    longitude, 
+    detectedLocation 
+  } = req.body;
+
+  const userQuery = (query || location || businessName || '').trim();
+  if (!userQuery || userQuery.length < 2) return res.json([]);
   
+  // Resolve target geographic area
+  let targetArea = '';
+  if (detectedLocation && detectedLocation.trim()) {
+    targetArea = detectedLocation.trim();
+  } else if (city && state) {
+    targetArea = `${city}, ${state}`;
+  } else if (city) {
+    targetArea = `${city}`;
+  } else if (state) {
+    targetArea = `${state}`;
+  }
+
+  const lat = latitude ? parseFloat(latitude) : null;
+  const lng = longitude ? parseFloat(longitude) : null;
+  const hasCoords = lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng);
+
   try {
-    const searchQuery = `${businessName || ''} ${category || ''} ${location}`.trim();
     const apiKey = process.env.GOOGLE_API_KEY;
     
+    // 1. Try Google Places API (New) if Google API key is configured
     if (apiKey) {
-      const googleResponse = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${apiKey}`);
-      const data = await googleResponse.json();
+      try {
+        const newPlacesBody = {
+          textQuery: targetArea ? `${userQuery} ${targetArea}` : userQuery
+        };
+        if (hasCoords) {
+          newPlacesBody.locationBias = {
+            circle: {
+              center: { latitude: lat, longitude: lng },
+              radius: 50000.0 // 50km radius
+            }
+          };
+        }
 
-      if (data.status === 'OK' && data.results && Array.isArray(data.results)) {
-        let places = data.results.map(place => ({
-          name: place.name,
-          address: place.formatted_address,
-          rating: place.rating || 0,
-          reviewsCount: place.user_ratings_total || 0
-        }));
-        
-        // Sort rank wise (highest rating and most reviews first)
-        places.sort((a, b) => (b.reviewsCount * b.rating) - (a.reviewsCount * a.rating));
+        const newGoogleRes = await fetch('https://places.googleapis.com/v1/places:searchText', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': apiKey,
+            'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.rating,places.userRatingCount'
+          },
+          body: JSON.stringify(newPlacesBody)
+        });
 
-        return res.json(places.slice(0, 8)); // Return top 8 ranked places
+        if (newGoogleRes.ok) {
+          const newGoogleData = await newGoogleRes.json();
+          if (newGoogleData.places && Array.isArray(newGoogleData.places) && newGoogleData.places.length > 0) {
+            let places = newGoogleData.places.map(p => ({
+              name: p.displayName?.text || p.name,
+              address: p.formattedAddress,
+              rating: p.rating || 0,
+              reviewsCount: p.userRatingCount || 0
+            }));
+            places.sort((a, b) => (b.reviewsCount * (b.rating || 1)) - (a.reviewsCount * (a.rating || 1)));
+            return res.json(places.slice(0, 8));
+          }
+        }
+      } catch (newApiErr) {
+        console.warn('Google Places (New) attempt failed:', newApiErr.message);
+      }
+
+      // 2. Try Google Places API (Legacy)
+      try {
+        let legacyUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(`${userQuery} ${targetArea}`.trim())}&key=${apiKey}`;
+        if (hasCoords) {
+          legacyUrl += `&location=${lat},${lng}&radius=50000`;
+        }
+        const legacyRes = await fetch(legacyUrl);
+        const legacyData = await legacyRes.json();
+
+        if (legacyData.status === 'OK' && legacyData.results && Array.isArray(legacyData.results) && legacyData.results.length > 0) {
+          let places = legacyData.results.map(place => ({
+            name: place.name,
+            address: place.formatted_address,
+            rating: place.rating || 0,
+            reviewsCount: place.user_ratings_total || 0
+          }));
+          places.sort((a, b) => (b.reviewsCount * b.rating) - (a.reviewsCount * a.rating));
+          return res.json(places.slice(0, 8));
+        }
+      } catch (legacyApiErr) {
+        console.warn('Google Places (Legacy) attempt failed:', legacyApiErr.message);
       }
     }
 
-    // Fallback to OpenAI if Google Maps API key is invalid or request fails
-    const prompt = `You are a local search engine. The user is searching for a business named "${businessName || 'Business'}" in the category "${category || 'Store'}" near "${location}".
-Return a JSON array of 3 to 4 realistic (but fictional or real) business locations in that specific area that match the query. Each object should have:
-- "name": The name of the business (use the provided name if possible, or similar competitors)
-- "address": A realistic street address in or around ${location}
-- "rating": A random decimal rating between 3.5 and 5.0
-- "reviewsCount": A random integer between 10 and 500
+    // 3. Try OpenStreetMap Nominatim for real nearby listings
+    try {
+      let osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(`${userQuery} ${targetArea}`.trim())}&format=json&addressdetails=1&limit=6&countrycodes=in`;
+      if (hasCoords) {
+        const viewbox = `${lng - 0.4},${lat + 0.4},${lng + 0.4},${lat - 0.4}`;
+        osmUrl += `&viewbox=${viewbox}&bounded=0`;
+      }
+      const osmRes = await fetch(osmUrl, {
+        headers: { 'User-Agent': 'ReviewPulse-App/1.0' }
+      });
+      if (osmRes.ok) {
+        const osmData = await osmRes.json();
+        if (Array.isArray(osmData) && osmData.length > 0) {
+          const places = osmData.map(item => ({
+            name: item.name || (item.display_name ? item.display_name.split(',')[0] : userQuery),
+            address: item.display_name,
+            rating: 4.5,
+            reviewsCount: 25
+          }));
+          return res.json(places.slice(0, 8));
+        }
+      }
+    } catch (osmErr) {
+      console.warn('OpenStreetMap search failed:', osmErr.message);
+    }
 
-Return ONLY the JSON array. No markdown, no extra text.`;
+    // 4. Grounded AI Local Search Engine (OpenAI)
+    // Geographically bound the results to the user's detected location / city
+    const locationContext = targetArea 
+      ? `${targetArea}${hasCoords ? ` (GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)})` : ''}`
+      : 'India';
+
+    const prompt = `You are an Indian local business directory and search engine.
+The user is searching for a business or store near their current location.
+
+User Search Query: "${userQuery}"
+Category: "${category || 'General Business'}"
+User's Real Location / Area: "${locationContext}"
+
+Requirements:
+1. All returned places MUST be strictly located within or immediately around "${locationContext}".
+   CRITICAL: Do NOT invent fictional US addresses (e.g. no "123 Solar Way", no fictional US ZIP codes), and do NOT use wrong states. All addresses must be genuine local addresses in or around "${locationContext}".
+2. If "${userQuery}" is a real or known business/company (for example "${userQuery}" located in "${locationContext}"), output that exact business as the primary result with its realistic/known address, local colony/area name, landmark, and valid 6-digit Indian PIN code in "${locationContext}".
+3. Also provide 2 to 3 other relevant local businesses or competitors in the same category within "${locationContext}" using authentic local street names, commercial areas, or markets from that area.
+4. Return ONLY a valid JSON array of 3 to 4 objects. Each object must have:
+   - "name": Business name
+   - "address": Detailed address including local area, landmark, "${locationContext}", and PIN code
+   - "rating": Decimal rating between 4.1 and 4.9
+   - "reviewsCount": Integer review count between 20 and 500
+
+Return ONLY the raw JSON array. No markdown code blocks, no explanations.`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -1061,10 +1177,31 @@ Return ONLY the JSON array. No markdown, no extra text.`;
     if (text.startsWith('```')) text = text.replace('```', '');
     if (text.endsWith('```')) text = text.slice(0, -3);
 
-    res.json(JSON.parse(text));
+    const parsed = JSON.parse(text);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return res.json(parsed);
+    }
+
+    // Fallback if parsing didn't return an array
+    return res.json([
+      {
+        name: userQuery,
+        address: targetArea ? `${targetArea}` : 'Local Business Location',
+        rating: 4.7,
+        reviewsCount: 50
+      }
+    ]);
   } catch (error) {
     console.error('Search Places Error:', error);
-    res.json([]);
+    // Provide a resilient fallback so the user is never blocked
+    return res.json([
+      {
+        name: userQuery,
+        address: targetArea ? `${targetArea}` : 'Local Area',
+        rating: 4.7,
+        reviewsCount: 30
+      }
+    ]);
   }
 });
 
