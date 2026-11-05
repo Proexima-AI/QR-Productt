@@ -37,6 +37,14 @@ export default function PaymentGateway({ onPaymentSuccess, trialDaysLeft = 0, is
       durationDays: 365 + 45 + trialDaysLeft,
       discount: 0,
       extraDaysText: `+ 45 Extra Days Free!${trialDaysLeft > 0 ? ` + ${trialDaysLeft} Trial Days Carried Over` : ''}`,
+    },
+    {
+      id: 'pro_yearly',
+      name: 'Pro Plan (Multi-Language)',
+      price: 299 * 12,
+      durationDays: 365 + 60 + trialDaysLeft,
+      discount: 0,
+      extraDaysText: `+ 60 Extra Days Free! Multi-Language Included${trialDaysLeft > 0 ? ` + ${trialDaysLeft} Trial Days Carried Over` : ''}`,
     }
   ];
 
@@ -173,7 +181,7 @@ export default function PaymentGateway({ onPaymentSuccess, trialDaysLeft = 0, is
           )}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {plans.map((plan) => {
             const originalSubtotal = plan.price + setupFee;
             const totalDiscount = plan.discount + appliedPromo;
@@ -182,9 +190,21 @@ export default function PaymentGateway({ onPaymentSuccess, trialDaysLeft = 0, is
             const total = subtotal + gst;
 
             return (
-              <div key={plan.id} className={`bg-white rounded-2xl shadow-sm border p-8 flex flex-col ${plan.id === 'yearly' ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-slate-200'}`}>
+              <div 
+                key={plan.id} 
+                className={`bg-white rounded-2xl shadow-sm border p-6 md:p-7 flex flex-col ${
+                  plan.id === 'pro_yearly'
+                    ? 'border-violet-500 ring-2 ring-violet-500/20 shadow-md'
+                    : plan.id === 'yearly' 
+                    ? 'border-indigo-500 ring-1 ring-indigo-500' 
+                    : 'border-slate-200'
+                }`}
+              >
+                {plan.id === 'pro_yearly' && (
+                  <div className="text-xs font-bold text-violet-600 tracking-wide uppercase mb-2">Pro Multi-Language</div>
+                )}
                 {plan.id === 'yearly' && (
-                  <div className="text-xs font-bold text-indigo-600 tracking-wide uppercase mb-2">Best Value</div>
+                  <div className="text-xs font-bold text-indigo-600 tracking-wide uppercase mb-2">Most Popular</div>
                 )}
                 <h3 className="text-xl font-bold text-slate-900">{plan.name}</h3>
                 
@@ -222,19 +242,25 @@ export default function PaymentGateway({ onPaymentSuccess, trialDaysLeft = 0, is
                 </div>
 
                 {plan.extraDaysText && (
-                  <div className="mt-6 bg-green-50 text-green-700 p-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 border border-green-100">
-                    <Check className="h-4 w-4" /> {plan.extraDaysText}
+                  <div className={`mt-6 p-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 border ${
+                    plan.id === 'pro_yearly'
+                      ? 'bg-violet-50 text-violet-700 border-violet-100'
+                      : 'bg-green-50 text-green-700 border-green-100'
+                  }`}>
+                    <Check className="h-4 w-4 shrink-0" /> {plan.extraDaysText}
                   </div>
                 )}
 
                 <button
                   onClick={() => handlePayment(plan)}
                   disabled={loading}
-                  className={`mt-8 w-full rounded-xl py-3 px-4 font-semibold text-white transition-colors focus:ring-2 focus:ring-offset-2 ${
-                    plan.id === 'yearly' 
+                  className={`mt-8 w-full rounded-xl py-3 px-4 font-semibold text-white transition-all focus:ring-2 focus:ring-offset-2 ${
+                    plan.id === 'pro_yearly'
+                      ? 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 focus:ring-violet-600 shadow-md shadow-indigo-600/20'
+                      : plan.id === 'yearly' 
                       ? 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-600' 
                       : 'bg-slate-900 hover:bg-slate-800 focus:ring-slate-900'
-                  } disabled:opacity-70 disabled:cursor-not-allowed`}
+                  } disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer`}
                 >
                   {loading ? 'Processing...' : 'Pay Now'}
                 </button>
