@@ -1141,28 +1141,37 @@ app.post('/api/business/search-places', async (req, res) => {
       console.warn('OpenStreetMap search failed:', osmErr.message);
     }
 
+    // Helper to format proper title case for business names
+    const formatTitleCase = (str) => {
+      if (!str) return '';
+      return str
+        .split(/\s+/)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ')
+        .replace(/\b(Pvt|Ltd|Llc|Inc)\b/gi, (m) => m.toUpperCase() === 'PVT' ? 'Pvt' : m.toUpperCase() === 'LTD' ? 'Ltd' : m);
+    };
+
+    const formattedQuery = formatTitleCase(userQuery);
+    const effectiveArea = targetArea || (city && state ? `${city}, ${state}` : city || 'Bhubaneswar, Odisha');
+
     // 4. Grounded AI Local Search Engine (OpenAI)
     // Geographically bound the results to the user's detected location / city
-    const locationContext = targetArea 
-      ? `${targetArea}${hasCoords ? ` (GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)})` : ''}`
-      : 'India';
+    const prompt = `You are an Indian local business search directory engine.
+The user is searching for their own business to register on our platform.
 
-    const prompt = `You are an Indian local business directory and search engine.
-The user is searching for a business or store near their current location.
-
-User Search Query: "${userQuery}"
+Business Name Being Registered: "${formattedQuery}"
 Category: "${category || 'General Business'}"
-User's Real Location / Area: "${locationContext}"
+Target Local City / Area: "${effectiveArea}"
 
-Requirements:
-1. All returned places MUST be strictly located within or immediately around "${locationContext}".
-   CRITICAL: Do NOT invent fictional US addresses (e.g. no "123 Solar Way", no fictional US ZIP codes), and do NOT use wrong states. All addresses must be genuine local addresses in or around "${locationContext}".
-2. If "${userQuery}" is a real or known business/company (for example "${userQuery}" located in "${locationContext}"), output that exact business as the primary result with its realistic/known address, local colony/area name, landmark, and valid 6-digit Indian PIN code in "${locationContext}".
-3. Also provide 2 to 3 other relevant local businesses or competitors in the same category within "${locationContext}" using authentic local street names, commercial areas, or markets from that area.
-4. Return ONLY a valid JSON array of 3 to 4 objects. Each object must have:
-   - "name": Business name
-   - "address": Detailed address including local area, landmark, "${locationContext}", and PIN code
-   - "rating": Decimal rating between 4.1 and 4.9
+MANDATORY RULES:
+1. The user's business name is strictly "${formattedQuery}". Do NOT parse or treat any part of "${formattedQuery}" (such as "bidgly", "solar", "solutions", etc.) as a city or location name. The ONLY valid city and region is "${effectiveArea}".
+2. Result #1 MUST have the exact same business name: "${formattedQuery}". Its address MUST be a realistic commercial address located in "${effectiveArea}" (use authentic local colony/area name, landmark, "${effectiveArea}", and valid 6-digit Indian PIN code).
+3. The remaining 2 to 3 results should be realistic nearby businesses or competitors in the same category strictly within "${effectiveArea}".
+4. Clean addresses only: Do NOT include raw GPS numbers, "(GPS: ...)", or fictional US addresses (no US zip codes, no US states).
+5. Return ONLY a valid JSON array of 3 to 4 objects. Each object must have:
+   - "name": Business name (first item must be "${formattedQuery}")
+   - "address": Complete address in "${effectiveArea}" with PIN code
+   - "rating": Decimal rating between 4.2 and 4.9
    - "reviewsCount": Integer review count between 20 and 500
 
 Return ONLY the raw JSON array. No markdown code blocks, no explanations.`;
@@ -1177,29 +1186,56 @@ Return ONLY the raw JSON array. No markdown code blocks, no explanations.`;
     if (text.startsWith('```')) text = text.replace('```', '');
     if (text.endsWith('```')) text = text.slice(0, -3);
 
-    const parsed = JSON.parse(text);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return res.json(parsed);
+    let parsed = JSON.parse(text);
+    if (!Array.isArray(parsed)) parsed = [];
+
+    // Ensure the exact business name searched is always the #1 primary result
+    const hasExactName = parsed.some(p => 
+      p.name && (p.name.toLowerCase().includes(userQuery.toLowerCase()) || userQuery.toLowerCase().includes(p.name.toLowerCase()))
+    );
+
+    if (!hasExactName) {
+      parsed.unshift({
+        name: formattedQuery,
+        address: `${effectiveArea}, 751006`,
+        rating: 4.8,
+        reviewsCount: 150
+      });
+    }
+
+    // Sanitize any raw GPS tags or extraneous markers from address strings
+    parsed = parsed.map(place => ({
+      ...place,
+      address: (place.address || '').replace(/\s*\(GPS:[^)]*\),?/gi, '').replace(/,\s*,/g, ',').trim()
+    }));
+
+    if (parsed.length > 0) {
+      return res.json(parsed.slice(0, 8));
     }
 
     // Fallback if parsing didn't return an array
     return res.json([
       {
-        name: userQuery,
-        address: targetArea ? `${targetArea}` : 'Local Business Location',
-        rating: 4.7,
-        reviewsCount: 50
+        name: formattedQuery,
+        address: `${effectiveArea}, 751006`,
+        rating: 4.8,
+        reviewsCount: 120
       }
     ]);
   } catch (error) {
     console.error('Search Places Error:', error);
-    // Provide a resilient fallback so the user is never blocked
+    const formatTitleCase = (str) => {
+      if (!str) return '';
+      return str.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    };
+    const effectiveArea = targetArea || (city && state ? `${city}, ${state}` : city || 'Bhubaneswar, Odisha');
+    // Provide a resilient fallback so the user is never blocked and always sees their business name
     return res.json([
       {
-        name: userQuery,
-        address: targetArea ? `${targetArea}` : 'Local Area',
-        rating: 4.7,
-        reviewsCount: 30
+        name: formatTitleCase(userQuery),
+        address: `${effectiveArea}, 751006`,
+        rating: 4.8,
+        reviewsCount: 80
       }
     ]);
   }
