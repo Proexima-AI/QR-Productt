@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Building, Tag, Search, Link2, Sparkles, ArrowRight, ArrowLeft, Loader2, MapPin, Check, Plus, X, TrendingUp, Star, Users, Map } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Building, Tag, Search, Link2, Sparkles, ArrowRight, ArrowLeft, Loader2, MapPin, Check, Plus, X, TrendingUp, Star, Users, Map, Navigation, LocateFixed, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BUSINESS_CATEGORIES } from './BusinessPresets';
 import { INDIAN_STATES_AND_CITIES } from '../utils/indianStates';
@@ -55,6 +55,110 @@ export default function OnboardingSetup({ onComplete }) {
   const [placeResults, setPlaceResults] = useState([]);
   const [searchingPlaces, setSearchingPlaces] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
+  const [showManualAddress, setShowManualAddress] = useState(false);
+  const [manualAddress, setManualAddress] = useState('');
+
+  const [geoState, setGeoState] = useState({
+    status: 'idle', // 'idle' | 'detecting' | 'granted' | 'denied' | 'error'
+    coords: null, // { latitude, longitude }
+    detectedPlace: '', // e.g. "Bhubaneswar, Odisha"
+    errorMsg: ''
+  });
+
+  // Request browser location and reverse-geocode to detect nearby area
+  const detectCurrentLocation = () => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      setGeoState(prev => ({
+        ...prev,
+        status: 'denied',
+        errorMsg: 'Geolocation is not supported by your browser.'
+      }));
+      return;
+    }
+
+    setGeoState(prev => ({ ...prev, status: 'detecting', errorMsg: '' }));
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          let placeName = '';
+
+          // 1. Try BigDataCloud reverse geocode client (fast, CORS-friendly)
+          try {
+            const res = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+            );
+            if (res.ok) {
+              const data = await res.json();
+              const locality = data.locality || data.city || data.principalSubdivision || '';
+              const state = data.principalSubdivision || '';
+              placeName = [locality, state].filter(Boolean).join(', ');
+            }
+          } catch (e) {
+            console.warn('BigDataCloud reverse geocode failed:', e);
+          }
+
+          // 2. Fallback to OpenStreetMap Nominatim reverse geocode
+          if (!placeName) {
+            try {
+              const res = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+                { headers: { 'User-Agent': 'ReviewPulse-App/1.0' } }
+              );
+              if (res.ok) {
+                const data = await res.json();
+                const city = data.address?.city || data.address?.town || data.address?.state_district || '';
+                const state = data.address?.state || '';
+                placeName = [city, state].filter(Boolean).join(', ');
+              }
+            } catch (e) {
+              console.warn('OSM reverse geocode failed:', e);
+            }
+          }
+
+          const resolvedName = placeName || (formData.city ? `${formData.city}, ${formData.state}` : '');
+
+          setGeoState({
+            status: 'granted',
+            coords: { latitude, longitude },
+            detectedPlace: resolvedName,
+            errorMsg: ''
+          });
+        } catch (err) {
+          console.warn('Location detection processing error:', err);
+          setGeoState(prev => ({
+            ...prev,
+            status: 'error',
+            errorMsg: 'Could not resolve address from GPS.'
+          }));
+        }
+      },
+      (err) => {
+        console.warn('Geolocation permission or lookup error:', err);
+        setGeoState(prev => ({
+          ...prev,
+          status: err.code === 1 ? 'denied' : 'error',
+          errorMsg: err.code === 1 
+            ? 'Location access denied. Using your selected city for nearby search.' 
+            : 'Location temporarily unavailable.'
+        }));
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    );
+  };
+
+  // Auto-trigger location detection and set default search query when entering Step 3
+  useEffect(() => {
+    if (step === 3) {
+      if (geoState.status === 'idle') {
+        detectCurrentLocation();
+      }
+      if (!locationSearch && formData.name) {
+        setLocationSearch(formData.name);
+      }
+    }
+  }, [step]);
 
   // Persist state to localStorage whenever it changes
   useEffect(() => {
@@ -119,34 +223,43 @@ export default function OnboardingSetup({ onComplete }) {
   }, [step, formData.category, formData.state, formData.city, customState, customCity, customItem, formData.top_selling_items]);
 
   useEffect(() => {
-    if (step === 3 && locationSearch && locationSearch.length > 2) {
+    if (step === 3 && locationSearch && locationSearch.trim().length > 1) {
       const delayFn = setTimeout(async () => {
         setSearchingPlaces(true);
         try {
           const categoryName = BUSINESS_CATEGORIES.find(c => c.id === formData.category)?.name || formData.category;
+          const finalState = formData.state === 'Other' ? customState : formData.state;
+          const finalCity = formData.city === 'Other' ? customCity : formData.city;
+
           const res = await fetch(`${API_URL}/business/search-places`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-              location: locationSearch, 
+              query: locationSearch.trim(),
+              location: locationSearch.trim(), 
               category: categoryName, 
-              businessName: formData.name || '' 
+              businessName: formData.name || locationSearch.trim(),
+              city: finalCity,
+              state: finalState,
+              latitude: geoState.coords?.latitude || null,
+              longitude: geoState.coords?.longitude || null,
+              detectedLocation: geoState.detectedPlace || null
             })
           });
           const data = await res.json();
           setPlaceResults(Array.isArray(data) ? data : []);
         } catch (err) {
-          console.error(err);
+          console.error('Error fetching places:', err);
           setPlaceResults([]);
         } finally {
           setSearchingPlaces(false);
         }
-      }, 800);
+      }, 500);
       return () => clearTimeout(delayFn);
     } else {
       setPlaceResults([]);
     }
-  }, [step, locationSearch, formData.category, formData.name]);
+  }, [step, locationSearch, geoState.coords, geoState.detectedPlace, formData.category, formData.name, formData.city, formData.state, customCity, customState]);
 
   const validateStep = () => {
     setError('');
@@ -504,40 +617,99 @@ export default function OnboardingSetup({ onComplete }) {
               )}
 
               {step === 3 && (
-                <motion.div key="step3" variants={slideVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
-                  <h2 className="text-xl font-bold text-slate-800">Business Location</h2>
-                  
-                  <div className="space-y-1 relative">
-                    <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
-                      <MapPin className="w-4 h-4" /> Search Your Business on Google Maps
-                    </label>
-                    <input
-                      type="text"
-                      value={locationSearch}
-                      onChange={(e) => setLocationSearch(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all font-medium"
-                      placeholder="Enter city or area to find your business..."
-                    />
-                    {searchingPlaces && (
-                      <div className="absolute right-3 top-10 text-slate-400">
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      </div>
-                    )}
+                <motion.div key="step3" variants={slideVariants} initial="hidden" animate="visible" exit="exit" className="space-y-5">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-800">Business Location</h2>
+                    <p className="text-xs text-slate-500 mt-1">We detect your location to show accurate nearby businesses and map listings.</p>
                   </div>
 
-                  {/* Selected Business */}
-                  {formData.business_location && (
-                    <div className="p-4 border border-indigo-200 rounded-xl bg-indigo-50 shadow-sm space-y-2 relative">
-                      <div className="absolute top-2 right-2 cursor-pointer text-slate-400 hover:text-slate-600" onClick={() => setFormData({...formData, business_location: '', name: ''})}>
-                        <X className="w-4 h-4" />
+                  {/* Location Access & Detection Status Bar */}
+                  <div className={`p-3.5 rounded-xl border transition-all flex items-center justify-between gap-3 text-xs ${
+                    geoState.status === 'granted'
+                      ? 'bg-emerald-50/70 border-emerald-200 text-emerald-800'
+                      : geoState.status === 'detecting'
+                      ? 'bg-indigo-50/70 border-indigo-200 text-indigo-700'
+                      : 'bg-amber-50/70 border-amber-200 text-amber-800'
+                  }`}>
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      {geoState.status === 'detecting' ? (
+                        <Loader2 className="w-4 h-4 text-indigo-600 animate-spin shrink-0" />
+                      ) : geoState.status === 'granted' ? (
+                        <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
+                      ) : (
+                        <Navigation className="w-4 h-4 text-amber-600 shrink-0" />
+                      )}
+
+                      <div className="truncate">
+                        {geoState.status === 'detecting' && (
+                          <span className="font-semibold">Detecting your GPS location for nearby search...</span>
+                        )}
+                        {geoState.status === 'granted' && (
+                          <span>
+                            <strong className="font-bold">Nearby Search Active:</strong>{' '}
+                            <span className="font-medium text-emerald-900">{geoState.detectedPlace}</span>
+                          </span>
+                        )}
+                        {(geoState.status === 'idle' || geoState.status === 'denied' || geoState.status === 'error') && (
+                          <span>
+                            <strong className="font-bold">Nearby Area:</strong>{' '}
+                            {formData.city ? `${formData.city}, ${formData.state}` : 'Location access not enabled'}
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-3 p-2">
-                        <div className="bg-indigo-100 p-2 rounded-full">
-                          <MapPin className="text-indigo-600 w-5 h-5" />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={detectCurrentLocation}
+                      disabled={geoState.status === 'detecting'}
+                      className="shrink-0 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white border border-slate-200 shadow-xs hover:bg-slate-50 transition-colors flex items-center gap-1 text-slate-700 cursor-pointer"
+                    >
+                      <LocateFixed className="w-3.5 h-3.5 text-indigo-600" />
+                      {geoState.status === 'granted' ? 'Refresh GPS' : 'Use Current Location'}
+                    </button>
+                  </div>
+
+                  {/* Search Input */}
+                  <div className="space-y-1 relative">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                      <Search className="w-4 h-4 text-indigo-600" /> Search Your Business on Google Maps
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={locationSearch}
+                        onChange={(e) => setLocationSearch(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 p-3 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all font-medium text-sm"
+                        placeholder={geoState.detectedPlace ? `Search business near ${geoState.detectedPlace}...` : "Type business name or area to search..."}
+                      />
+                      {searchingPlaces && (
+                        <div className="absolute right-3 top-3 text-slate-400">
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Selected Business Card */}
+                  {formData.business_location && (
+                    <div className="p-4 border border-emerald-200 rounded-xl bg-emerald-50/60 shadow-xs space-y-2 relative">
+                      <button 
+                        type="button"
+                        aria-label="Remove selected location"
+                        className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 p-1 cursor-pointer" 
+                        onClick={() => setFormData(prev => ({ ...prev, business_location: '' }))}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      <div className="flex items-start gap-3">
+                        <div className="bg-emerald-100 p-2 rounded-full mt-0.5">
+                          <CheckCircle2 className="text-emerald-600 w-5 h-5" />
                         </div>
                         <div>
-                          <p className="font-bold text-indigo-900">{formData.name || 'Your Business'}</p>
-                          <p className="text-xs text-indigo-700">{formData.business_location}</p>
+                          <span className="text-[10px] font-bold tracking-wider text-emerald-700 uppercase bg-emerald-100/70 px-2 py-0.5 rounded-md">Selected Location</span>
+                          <p className="font-bold text-slate-800 text-sm mt-1">{formData.name || 'Your Business'}</p>
+                          <p className="text-xs text-slate-600 mt-0.5">{formData.business_location}</p>
                         </div>
                       </div>
                     </div>
@@ -545,27 +717,92 @@ export default function OnboardingSetup({ onComplete }) {
 
                   {/* Dropdown Results */}
                   {!formData.business_location && placeResults.length > 0 && (
-                    <div className="border border-slate-200 rounded-xl bg-white shadow-lg overflow-hidden flex flex-col max-h-60 overflow-y-auto">
+                    <div className="border border-slate-200 rounded-xl bg-white shadow-lg overflow-hidden flex flex-col max-h-64 overflow-y-auto divide-y divide-slate-100">
+                      <div className="bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                        <span>Nearby Suggestions</span>
+                        <span>{placeResults.length} found</span>
+                      </div>
                       {placeResults.map((place, idx) => (
                         <div 
                           key={idx}
                           onClick={() => {
-                            setFormData({ ...formData, business_location: place.address, name: place.name });
+                            setFormData(prev => ({
+                              ...prev,
+                              business_location: place.address,
+                              name: place.name || prev.name
+                            }));
                             setPlaceResults([]);
-                            setLocationSearch('');
                           }}
-                          className="flex items-center gap-3 p-3 hover:bg-slate-50 border-b border-slate-100 cursor-pointer transition-colors"
+                          className="flex items-start gap-3 p-3 hover:bg-indigo-50/50 cursor-pointer transition-colors group"
                         >
-                          <MapPin className="text-slate-400 w-5 h-5 flex-shrink-0" />
-                          <div>
-                            <p className="font-semibold text-slate-800">{place.name}</p>
-                            <p className="text-xs text-slate-500">{place.address}</p>
-                            <p className="text-xs text-yellow-500 font-medium">★ {place.rating} ({place.reviewsCount} reviews)</p>
+                          <MapPin className="text-slate-400 group-hover:text-indigo-600 w-5 h-5 flex-shrink-0 mt-0.5 transition-colors" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-slate-800 text-sm group-hover:text-indigo-700">{place.name}</p>
+                            <p className="text-xs text-slate-500 line-clamp-2">{place.address}</p>
+                            {place.rating > 0 && (
+                              <p className="text-xs text-amber-500 font-medium mt-0.5 flex items-center gap-1">
+                                ★ {place.rating} {place.reviewsCount > 0 ? `(${place.reviewsCount} reviews)` : ''}
+                              </p>
+                            )}
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
+
+                  {/* Manual entry fallback option */}
+                  <div className="pt-2">
+                    {showManualAddress ? (
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                        <label className="text-xs font-bold text-slate-700">Enter Exact Business Address</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={manualAddress}
+                            onChange={(e) => setManualAddress(e.target.value)}
+                            placeholder="Plot / Shop No, Street, Area, City..."
+                            className="flex-1 bg-white border border-slate-200 p-2.5 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (manualAddress.trim()) {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  business_location: manualAddress.trim(),
+                                  name: locationSearch.trim() || prev.name
+                                }));
+                                setShowManualAddress(false);
+                              }
+                            }}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                          >
+                            Set Location
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      !formData.business_location && (
+                        <div className="flex items-center justify-between text-xs text-slate-500 px-1">
+                          <span>Can't find your exact shop?</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setManualAddress(
+                                locationSearch 
+                                  ? `${locationSearch}, ${geoState.detectedPlace || `${formData.city}, ${formData.state}`}`
+                                  : (geoState.detectedPlace || `${formData.city}, ${formData.state}`)
+                              );
+                              setShowManualAddress(true);
+                            }}
+                            className="text-indigo-600 font-semibold hover:underline cursor-pointer"
+                          >
+                            Enter Address Manually
+                          </button>
+                        </div>
+                      )
+                    )}
+                  </div>
 
                   <div className="pt-6 border-t border-slate-100 flex flex-col items-center">
                     <p className="text-sm text-slate-500 mb-3">Can't find your business on the map?</p>
