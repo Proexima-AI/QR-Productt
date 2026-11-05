@@ -210,7 +210,7 @@ export default function LandingPage() {
 
         {/* Pricing Section */}
         <div id="pricing" className="w-[calc(100%+2rem)] lg:w-[calc(100%+10vw)] xl:w-[100vw] flex flex-col items-center mt-12 py-24" style={{ background: 'radial-gradient(ellipse 900px 500px at 50% -10%, #cfeaff, transparent), linear-gradient(180deg, #eaf6ff 0%, #f7fbff 60%, #ffffff 100%)' }}>
-          <div className="max-w-[1000px] mx-auto px-4">
+          <div className="max-w-[1240px] mx-auto px-4 w-full">
             <div className="text-center mb-16">
               <h2 className="text-4xl md:text-[2.75rem] font-serif font-extrabold mb-4 text-[#0B1A30] tracking-tight">Simple Pricing. More Reviews. More Growth.</h2>
               <p className="text-slate-500 text-lg max-w-2xl mx-auto mb-8">Choose a plan that fits your business. Start collecting more Google reviews today.</p>
@@ -221,7 +221,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch max-w-4xl mx-auto relative mt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch max-w-6xl mx-auto relative mt-2">
 
               {/* 6 Months Plan */}
               <div className="bg-slate-50/80 backdrop-blur-sm rounded-[2rem] p-3 md:p-3 border border-slate-200 flex flex-col shadow-sm">
@@ -262,7 +262,7 @@ export default function LandingPage() {
                     ))}
                   </div>
 
-                  <button onClick={() => navigate('/signup?plan=6m')} className="mt-auto w-full py-4 rounded-xl bg-[#1A2E4C] text-white font-semibold hover:bg-[#112036] transition-colors shadow-sm">
+                  <button onClick={() => navigate('/signup?plan=6m')} className="mt-auto w-full py-4 rounded-xl bg-[#1A2E4C] text-white font-semibold hover:bg-[#112036] transition-colors shadow-sm cursor-pointer">
                     Start 7 Days Free Trial
                   </button>
                 </div>
@@ -310,11 +310,60 @@ export default function LandingPage() {
                     ))}
                   </div>
 
-                  <button onClick={() => navigate('/signup?plan=1y')} className="mt-auto w-full py-4 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition-all">
+                  <button onClick={() => navigate('/signup?plan=1y')} className="mt-auto w-full py-4 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition-all cursor-pointer">
                     Start 7 Days Free Trial
                   </button>
                 </div>
               </div>
+
+              {/* Pro Plan (Multi-Language) */}
+              <div className="bg-slate-50/80 backdrop-blur-sm rounded-[2rem] p-3 md:p-3 border-2 border-indigo-500/30 flex flex-col shadow-md relative">
+                {/* Top Inner Box */}
+                <div className="bg-white rounded-[1.5rem] p-8 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100 relative">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-slate-800">Pro Plan</h3>
+                    <span className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-[11px] uppercase tracking-wider font-bold px-3 py-1 rounded-full shadow-xs">Multi-Language</span>
+                  </div>
+                  <div className="flex items-baseline gap-2 mb-4">
+                    <span className="text-2xl font-bold text-red-500 line-through">₹399</span>
+                    <span className="text-5xl font-bold text-[#0B1A30] tracking-tight">₹299</span>
+                    <span className="text-slate-500 font-medium">/month</span>
+                  </div>
+                  <p className="text-slate-500 text-sm leading-relaxed mb-1">
+                    Billed as ₹299 x 12 months. Offer price annual plan.
+                  </p>
+                  <p className="text-slate-400 text-xs">
+                    Plus <span className="line-through text-slate-500">₹1,999</span> <span className="font-semibold text-slate-700">₹1,499</span> one-time cost + 18% GST
+                  </p>
+                </div>
+
+                {/* Bottom Inner Box */}
+                <div className="bg-white rounded-[1.5rem] p-8 mt-3 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100 flex flex-col flex-1">
+                  <h4 className="text-[#0B1A30] font-medium mb-6">Features included:</h4>
+
+                  <div className="space-y-4 mb-10">
+                    {[
+                      'Everything in 1 Year',
+                      'Multi-Language AI Support (Odia, Hindi, English)',
+                      'Instant Regional Language QR Reviews',
+                      'Smart Language Auto-Detection',
+                      'Advanced Negative Review Interception',
+                      'VIP Dedicated Priority Support',
+                      'Get Extra 60 days Free'
+                    ].map((feature, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-indigo-500 shrink-0" strokeWidth={2.5} />
+                        <span className="text-slate-600 text-sm font-medium">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button onClick={() => navigate('/signup?plan=pro_1y')} className="mt-auto w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold shadow-md shadow-indigo-600/20 transition-all cursor-pointer">
+                    Start 7 Days Free Trial
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
